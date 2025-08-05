@@ -23,6 +23,8 @@ class UserRoleSeeder extends Seeder
         $karyawan = User::factory()->create([
             'name' => 'Karyawan User',
             'email' => 'karyawan@example.com',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',   // <-- TAMBAHAN
+            'no_telepon' => '081234567001',             // <-- TAMBAHAN
             'password' => Hash::make('password')
         ]);
         $karyawan->assignRole($role_karyawan);
@@ -31,6 +33,8 @@ class UserRoleSeeder extends Seeder
         $driver = User::factory()->create([
             'name' => 'Driver User',
             'email' => 'driver@example.com',
+            'alamat' => 'Jl. Sudirman No. 2, Bandung', // <-- TAMBAHAN
+            'no_telepon' => '081234567002',            // <-- TAMBAHAN
             'password' => Hash::make('password')
         ]);
         $driver->assignRole($role_driver);
