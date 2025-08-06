@@ -52,7 +52,7 @@ class User extends Authenticatable
         ];
     }
 
-    public function attendance()
+    public function attendances()
     {
         return $this->hasMany(Attendance::class);
     }
