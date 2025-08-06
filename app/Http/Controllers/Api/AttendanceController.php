@@ -24,7 +24,7 @@ class AttendanceController extends Controller
         Log::info('Menerima permintaan absensi...');
         try {
             $request->validate([
-                'photo' => 'required|image|max:2048',
+                'photo' => 'required|image',
                 'latitude' => 'required|numeric',
                 'longitude' => 'required|numeric',
                 'is_mocked' => 'required|boolean',
