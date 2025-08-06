@@ -51,8 +51,8 @@ class User extends Authenticatable
         ];
     }
 
-    public function attendances()
+    public function attendance()
     {
-        return $this->hasMany(Attendances::class);
+        return $this->hasMany(Attendance::class);
     }
 }
