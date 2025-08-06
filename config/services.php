@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'azure' => [
+        'face_api_endpoint' => env('AZURE_FACE_API_ENDPOINT'),
+        'face_api_key' => env('AZURE_FACE_API_KEY'),
+        'person_group_id' => env('AZURE_PERSON_GROUP_ID'),
+    ],
+
 ];

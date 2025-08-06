@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('azure_person_id')->nullable();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('alamat')->nullable();

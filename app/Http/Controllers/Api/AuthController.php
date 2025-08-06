@@ -7,12 +7,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use App\Services\AzureFaceService;
 
 class AuthController extends Controller
 {
+    public function __construct(protected AzureFaceService $azureFaceService)
+    {
+        $this->azureFaceService = $azureFaceService;
+    }
     public function login(Request $request)
     {
         $request->validate([
@@ -22,8 +26,8 @@ class AuthController extends Controller
 
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
-                'message' => 'Kredensial tidak valid.'
-            ], 401); // 401 Unauthorized
+                'message' => 'Email atau password salah.'
+            ], 401);
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
@@ -72,8 +76,8 @@ class AuthController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:users'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'alamat' => ['required', 'string', 'max:500'],        // <-- TAMBAHAN
-            'no_telepon' => ['required', 'string', 'max:20'],     // <-- TAMBAHAN
+            'alamat' => ['required', 'string', 'min:10', 'max:500'],
+            'no_telepon' => ['required', 'string', 'min:10'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -81,8 +85,8 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'alamat' => $request->alamat,                        // <-- TAMBAHAN
-            'no_telepon' => $request->no_telepon,                // <-- TAMBAHAN
+            'alamat' => $request->alamat,
+            'no_telepon' => $request->no_telepon,
             'password' => Hash::make($request->password),
         ]);
 
@@ -94,5 +98,32 @@ class AuthController extends Controller
             'message' => 'Registrasi berhasil.',
             'user' => $user
         ], 201);
+    }
+
+    public function registerFace(Request $request)
+    {
+        $request->validate(['photo' => 'required|image']);
+        $user = $request->user();
+
+        // 1. Buat "Person" di Azure
+        $personId = $this->azureFaceService->createPerson($user->name);
+        if (!$personId) {
+            return response()->json(['message' => 'Gagal membuat profil wajah di Azure.'], 500);
+        }
+
+        // 2. Tambahkan foto wajah ke "Person"
+        $isFaceAdded = $this->azureFaceService->addFaceToPerson($personId, $request->file('photo'));
+        if (!$isFaceAdded) {
+            return response()->json(['message' => 'Gagal menambahkan foto wajah ke profil.'], 500);
+        }
+
+        // 3. Simpan personId ke database user
+        $user->azure_person_id = $personId;
+        $user->save();
+
+        // 4. Latih PersonGroup (proses async)
+        $this->azureFaceService->trainPersonGroup();
+
+        return response()->json(['message' => 'Wajah berhasil didaftarkan.']);
     }
 }

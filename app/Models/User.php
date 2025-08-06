@@ -23,8 +23,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'alamat',     // <-- TAMBAHAN
-        'no_telepon', // <-- TAMBAHAN
+        'alamat',
+        'no_telepon',
+        'azure_person_id',
     ];
 
     /**
@@ -48,5 +49,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendances::class);
     }
 }
