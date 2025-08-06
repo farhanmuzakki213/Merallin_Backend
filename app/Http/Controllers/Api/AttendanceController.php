@@ -21,6 +21,7 @@ class AttendanceController extends Controller
 
     public function clockIn(Request $request)
     {
+        Log::info('Menerima permintaan absensi...');
         try {
             $request->validate([
                 'photo' => 'required|image|max:2048',
@@ -30,10 +31,12 @@ class AttendanceController extends Controller
                 // 'azure_person_id' => 'required|string', // Terima personId dari Flutter
             ]);
 
+            Log::info('Validasi berhasil.');
             $user = $request->user();
 
             // Validasi keamanan
             if ($request->is_mocked) {
+                Log::warning('Terdeteksi lokasi palsu dari user: ' . $user->id);
                 return response()->json(['message' => 'Terdeteksi menggunakan lokasi palsu.'], 403);
             }
 
@@ -44,6 +47,7 @@ class AttendanceController extends Controller
 
             // Simpan foto
             $path = $request->file('photo')->store('public/attendance_photos');
+            Log::info('Foto berhasil disimpan di: ' . $path);
 
             // Simpan data absensi
             $user->attendances()->create([
@@ -52,10 +56,12 @@ class AttendanceController extends Controller
                 'longitude' => $request->longitude,
                 'is_mocked' => $request->is_mocked,
             ]);
+            Log::info('Data absensi berhasil disimpan untuk user: ' . $user->id);
 
             return response()->json(['message' => 'Absensi berhasil direkam.']);
         } catch (ValidationException $e) {
             // Jika validasi gagal, kirim respons error 422
+            Log::error('Gagal validasi: ', $e->errors());
             return response()->json([
                 'message' => 'Data yang diberikan tidak valid.',
                 'errors' => $e->errors(),
@@ -63,7 +69,7 @@ class AttendanceController extends Controller
         } catch (Throwable $th) {
             // Jika terjadi error lain (misal: gagal simpan file, masalah database, dll.)
             // Log errornya untuk debugging di server
-            Log::error('Attendance Clock-in Error: ' . $th->getMessage());
+            Log::error('Error Absensi: ' . $th->getMessage());
 
             // Kirim respons error 500 ke frontend
             return response()->json([
