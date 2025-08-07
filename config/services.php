@@ -34,18 +34,4 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-
-    'azure' => [
-        'face_api_endpoint' => env('AZURE_FACE_API_ENDPOINT'),
-        'face_api_key' => env('AZURE_FACE_API_KEY'),
-        'person_group_id' => env('AZURE_PERSON_GROUP_ID'),
-    ],
-
-    'aws' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION'),
-        'collection_id' => env('AWS_REKOGNITION_COLLECTION_ID'),
-    ],
-
 ];

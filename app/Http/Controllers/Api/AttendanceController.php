@@ -6,17 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Services\AwsRekognitionService;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AttendanceController extends Controller
 {
-    protected $azureFaceService;
-
-    public function __construct(protected AwsRekognitionService $awsRekognitionService)
-    {
-    }
 
     public function clockIn(Request $request)
     {
@@ -37,13 +31,6 @@ class AttendanceController extends Controller
             if ($request->is_mocked) {
                 Log::warning('Terdeteksi lokasi palsu dari user: ' . $user->id);
                 return response()->json(['message' => 'Terdeteksi menggunakan lokasi palsu.'], 403);
-            }
-
-            // Verifikasi bahwa personId yang dikirim dari Flutter cocok dengan yang ada di database
-            $matchedFaceId = $this->awsRekognitionService->searchFace($request->file('photo'));
-
-            if (!$matchedFaceId || $matchedFaceId !== $user->aws_face_id) {
-                return response()->json(['message' => 'Verifikasi wajah gagal. Wajah tidak cocok.'], 403);
             }
 
             // Simpan foto
