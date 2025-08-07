@@ -9,13 +9,9 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use App\Services\AwsRekognitionService;
 
 class AuthController extends Controller
 {
-    public function __construct(protected AwsRekognitionService $awsRekognitionService)
-    {
-    }
     public function login(Request $request)
     {
         $request->validate([
@@ -99,22 +95,5 @@ class AuthController extends Controller
             'message' => 'Registrasi berhasil.',
             'user' => $user
         ], 201);
-    }
-
-    public function registerFace(Request $request)
-    {
-        $request->validate(['photo' => 'required|image']);
-        $user = $request->user();
-
-        $faceId = $this->awsRekognitionService->indexFace($request->file('photo'), $user->id);
-
-        if (!$faceId) {
-            return response()->json(['message' => 'Gagal mendaftarkan wajah di AWS.'], 500);
-        }
-
-        $user->aws_face_id = $faceId;
-        $user->save();
-
-        return response()->json(['message' => 'Wajah berhasil didaftarkan.']);
     }
 }

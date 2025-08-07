@@ -14,12 +14,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(AzureFaceService::class, function ($app) {
-            return new AzureFaceService();
-        });
-        $this->app->singleton(AwsRekognitionService::class, function ($app) {
-            return new AwsRekognitionService();
-        });
+        //
     }
 
     /**
