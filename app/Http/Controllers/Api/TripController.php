@@ -109,7 +109,7 @@ class TripController extends Controller
             $user = $request->user();
 
             // Ambil semua trip milik user, urutkan dari yang terbaru
-            $trips = $user->trips()->latest()->get()->map(function ($trip) {
+            $trips = $user->trips()->with('user')->latest()->get()->map(function ($trip) {
                 return [
                     'id' => $trip->id,
                     'project_name' => $trip->project_name,
@@ -121,6 +121,9 @@ class TripController extends Controller
                     'ended_at' => $trip->ended_at?->toDateTimeString(),
                     'start_photo_url' => Storage::url($trip->start_photo_path),
                     'end_photo_url' => $trip->end_photo_path ? Storage::url($trip->end_photo_path) : null,
+                    'user' => [
+                        'name' => $trip->user->name,
+                    ]
                 ];
             });
 
