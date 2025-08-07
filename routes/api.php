@@ -15,7 +15,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
-    });
+    }); 
 
     // Rute baru untuk registrasi wajah dan absensi
     Route::post('/user/register-face', [AuthController::class, 'registerFace']);

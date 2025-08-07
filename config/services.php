@@ -41,4 +41,11 @@ return [
         'person_group_id' => env('AZURE_PERSON_GROUP_ID'),
     ],
 
+    'aws' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION'),
+        'collection_id' => env('AWS_REKOGNITION_COLLECTION_ID'),
+    ],
+
 ];

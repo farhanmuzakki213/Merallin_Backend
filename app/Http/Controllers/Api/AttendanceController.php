@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Services\AzureFaceService; // Import service
+use App\Services\AwsRekognitionService;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -14,10 +14,9 @@ class AttendanceController extends Controller
 {
     protected $azureFaceService;
 
-    // public function __construct(AzureFaceService $azureFaceService)
-    // {
-    //     $this->azureFaceService = $azureFaceService;
-    // }
+    public function __construct(protected AwsRekognitionService $awsRekognitionService)
+    {
+    }
 
     public function clockIn(Request $request)
     {
@@ -41,9 +40,11 @@ class AttendanceController extends Controller
             }
 
             // Verifikasi bahwa personId yang dikirim dari Flutter cocok dengan yang ada di database
-            // if ($user->azure_person_id !== $request->azure_person_id) {
-            //     return response()->json(['message' => 'Verifikasi wajah gagal. Data tidak cocok.'], 403);
-            // }
+            $matchedFaceId = $this->awsRekognitionService->searchFace($request->file('photo'));
+
+            if (!$matchedFaceId || $matchedFaceId !== $user->aws_face_id) {
+                return response()->json(['message' => 'Verifikasi wajah gagal. Wajah tidak cocok.'], 403);
+            }
 
             // Simpan foto
             $path = $request->file('photo')->store('public/attendance_photos');

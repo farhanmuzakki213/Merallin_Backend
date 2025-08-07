@@ -26,7 +26,7 @@ class User extends Authenticatable
         'password',
         'alamat',
         'no_telepon',
-        'azure_person_id',
+        'aws_face_id',
     ];
 
     /**

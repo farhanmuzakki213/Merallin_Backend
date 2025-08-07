@@ -9,13 +9,12 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use App\Services\AzureFaceService;
+use App\Services\AwsRekognitionService;
 
 class AuthController extends Controller
 {
-    public function __construct(protected AzureFaceService $azureFaceService)
+    public function __construct(protected AwsRekognitionService $awsRekognitionService)
     {
-        $this->azureFaceService = $azureFaceService;
     }
     public function login(Request $request)
     {
@@ -37,6 +36,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login berhasil',
             'user' => $user,
+            'role' => $user->getRoleNames(),
             'meta' => [
                 'token' => $token,
                 'token_type' => 'Bearer',
@@ -105,24 +105,14 @@ class AuthController extends Controller
         $request->validate(['photo' => 'required|image']);
         $user = $request->user();
 
-        // 1. Buat "Person" di Azure
-        $personId = $this->azureFaceService->createPerson($user->name);
-        if (!$personId) {
-            return response()->json(['message' => 'Gagal membuat profil wajah di Azure.'], 500);
+        $faceId = $this->awsRekognitionService->indexFace($request->file('photo'), $user->id);
+
+        if (!$faceId) {
+            return response()->json(['message' => 'Gagal mendaftarkan wajah di AWS.'], 500);
         }
 
-        // 2. Tambahkan foto wajah ke "Person"
-        $isFaceAdded = $this->azureFaceService->addFaceToPerson($personId, $request->file('photo'));
-        if (!$isFaceAdded) {
-            return response()->json(['message' => 'Gagal menambahkan foto wajah ke profil.'], 500);
-        }
-
-        // 3. Simpan personId ke database user
-        $user->azure_person_id = $personId;
+        $user->aws_face_id = $faceId;
         $user->save();
-
-        // 4. Latih PersonGroup (proses async)
-        $this->azureFaceService->trainPersonGroup();
 
         return response()->json(['message' => 'Wajah berhasil didaftarkan.']);
     }

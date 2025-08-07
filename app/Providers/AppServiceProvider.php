@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\AwsRekognitionService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 use App\Services\AzureFaceService;
@@ -15,6 +16,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AzureFaceService::class, function ($app) {
             return new AzureFaceService();
+        });
+        $this->app->singleton(AwsRekognitionService::class, function ($app) {
+            return new AwsRekognitionService();
         });
     }
 
