@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ResetPasswordController;
 use App\Http\Controllers\Api\TripController;
 use Illuminate\Http\Request;
@@ -17,6 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::post('/user/profile', [ProfileController::class, 'updateProfile']);
+    Route::post('/user/password', [ProfileController::class, 'updatePassword']);
 
     // Rute untuk absensi karyawan
     Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn']);
