@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DriverLocationController;
 use App\Http\Controllers\Api\ForgotPasswordController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ResetPasswordController;
@@ -26,7 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendance/history', [AttendanceController::class, 'history']);
 
     // Rute untuk Absensi Driver
-    Route::post('/trips/start', [TripController::class, 'startTrip']);
+    Route::post('/requestTrip', [TripController::class, 'startTrip']);
     Route::post('/trips/{trip}/end', [TripController::class, 'endTrip']);
     Route::get('/trips/history', [TripController::class, 'getTrips']);
+    Route::post('/driver/location', [DriverLocationController::class, 'update']);
 });

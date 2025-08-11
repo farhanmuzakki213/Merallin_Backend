@@ -15,30 +15,34 @@ class ProfileController extends Controller
 {
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        // FormRequest sudah melakukan validasi secara otomatis.
-        // Jika validasi gagal, Laravel akan mengirim response error 422.
+        // 1. Dapatkan pengguna dan data yang sudah divalidasi
+    $user = $request->user();
+    $validatedData = $request->validated();
 
-        $user = $request->user();
-        $validatedData = $request->validated();
-
-        // $request->validated() hanya akan mengembalikan data yang sudah tervalidasi
-        $user->update($request->validated());
-
-        if ($request->hasFile('photo')) {
-            // Hapus foto lama jika ada
-            if ($user->profile_photo_path) {
-                Storage::disk('public')->delete($user->profile_photo_path);
-            }
-
-            // Simpan foto baru dan dapatkan path-nya
-            $path = $request->file('photo')->store('profile-photos', 'public');
-            $validatedData['profile_photo_path'] = $path;
+    // 2. Cek jika ada file foto baru yang diunggah
+    if ($request->hasFile('photo')) {
+        // Hapus foto lama jika ada
+        if ($user->profile_photo_path) {
+            // Konversi URL lama kembali ke path relatif untuk dihapus
+            $oldPath = str_replace(Storage::url(''), '', $user->profile_photo_path);
+            Storage::disk('public')->delete($oldPath);
         }
 
-        return response()->json([
-            'message' => 'Profil berhasil diperbarui.',
-            'user' => $user,
-        ], 200);
+        // Simpan foto baru di 'storage/app/public/profile-photos'
+        $path = $request->file('photo')->store('profile-photos', 'public');
+
+        // Buat URL lengkap dan tambahkan ke data yang akan diupdate
+        $validatedData['profile_photo_path'] = Storage::url($path);
+    }
+
+    // 3. Update data pengguna dengan semua data baru (termasuk URL foto jika ada)
+    $user->update($validatedData);
+
+    // 4. Kembalikan response dengan data pengguna yang sudah ter-update
+    return response()->json([
+        'message' => 'Profil berhasil diperbarui.',
+        'user' => $user->fresh(),
+    ], 200);
     }
 
     /**

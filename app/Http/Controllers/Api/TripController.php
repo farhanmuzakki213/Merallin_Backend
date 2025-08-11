@@ -12,51 +12,55 @@ use Throwable;
 
 class TripController extends Controller
 {
-    public function startTrip(Request $request)
+    public function requestTrip(Request $request)
     {
         try {
+            // 1. Validasi input dari form pop-up
+            // Menyesuaikan validasi dengan data yang dibutuhkan untuk pengajuan.
             $validated = $request->validate([
                 'project_name' => 'required|string|max:255',
-                'license_plate' => 'required|string|max:20',
-                'start_km' => 'required|integer',
-                'start_photo' => 'required|image|max:8192',
-                'delivery_letter' => 'required|image|max:8192',
-                'latitude' => 'required|numeric',
-                'longitude' => 'required|numeric',
+                'origin'       => 'required|string|max:255',
+                'destination'  => 'required|string|max:255',
             ]);
 
             $user = $request->user();
 
-            // Cek apakah ada trip yang masih aktif
-            $activeTrip = Trip::where('user_id', $user->id)->whereNull('ended_at')->first();
+            // 2. Cek apakah driver masih memiliki trip yang aktif (belum selesai)
+            // Logika ini sudah benar untuk mencegah driver membuat trip baru jika masih ada yang aktif.
+            // Sebuah trip dianggap aktif jika 'ended_at' nya masih kosong (NULL).
+            $activeTrip = Trip::where('user_id', $user->id)->whereNull('started_at')->first();
             if ($activeTrip) {
-                return response()->json(['message' => 'Anda masih memiliki perjalanan yang aktif.'], 409); // 409 Conflict
+                return response()->json([
+                    'message' => 'Anda masih memiliki perjalanan yang aktif dan belum diselesaikan.'
+                ], 409); // 409 Conflict
             }
 
-            // Simpan file-file
-            $startPhotoPath = $request->file('start_photo')->store('public/trip_photos');
-            $deliveryLetterPath = $request->file('delivery_letter')->store('public/delivery_letters');
-
-            // Buat record trip baru
+            // 3. Buat record trip baru dengan status 'pengajuan'
+            // Menghapus field yang tidak perlu seperti license_plate, km, foto, dan koordinat.
             $trip = Trip::create([
-                'user_id' => $user->id,
+                'user_id'      => $user->id, // Diambil dari user yang login
                 'project_name' => $validated['project_name'],
-                'license_plate' => $validated['license_plate'],
-                'start_km' => $validated['start_km'],
-                'start_photo_path' => $startPhotoPath,
-                'delivery_letter_path' => $deliveryLetterPath,
-                'start_latitude' => $validated['latitude'],
-                'start_longitude' => $validated['longitude'],
-                'status' => 'pengajuan', // Default status
+                'origin'       => $validated['origin'],
+                'destination'  => $validated['destination'],
+                'status_trip'  => 'pengajuan', // Status diatur secara otomatis
             ]);
 
-            return response()->json(['message' => 'Perjalanan berhasil dimulai.', 'trip' => $trip], 201);
-        } catch (ValidationException  $e) {
-            throw $e;
+            // 4. Beri respons sukses
+            return response()->json([
+                'message' => 'Pengajuan perjalanan berhasil dibuat dan menunggu persetujuan.',
+                'trip'    => $trip
+            ], 201); // 201 Created
+
+        } catch (ValidationException $e) {
+            // Jika validasi gagal, kembalikan error validasi
+            return response()->json([
+                'message' => 'Data yang diberikan tidak valid.',
+                'errors' => $e->errors()
+            ], 422);
         } catch (Throwable $th) {
-            // Tangkap semua error LAINNYA
-            Log::error('Start Trip Error: ' . $th->getMessage());
-            return response()->json(['message' => 'Terjadi kesalahan di server.'], 500);
+            // Tangkap semua error lainnya untuk mencegah aplikasi crash
+            Log::error('Request Trip Error: ' . $th->getMessage());
+            return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
         }
     }
 
@@ -114,7 +118,11 @@ class TripController extends Controller
                     'id' => $trip->id,
                     'project_name' => $trip->project_name,
                     'license_plate' => $trip->license_plate,
-                    'status' => $trip->status,
+                    'status_trip' => $trip->status_trip,
+                    'status_lokasi' => $trip->status_lokasi,
+                    'status_muatan' => $trip->status_muatan,
+                    'origin' => $trip->origin,
+                    'destination' => $trip->destination,
                     'start_km' => $trip->start_km,
                     'end_km' => $trip->end_km,
                     'started_at' => $trip->started_at->toDateTimeString(),

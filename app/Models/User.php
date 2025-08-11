@@ -27,7 +27,7 @@ class User extends Authenticatable
         'password',
         'alamat',
         'no_telepon',
-        'aws_face_id',
+        'profile_photo_path',
     ];
 
     /**
@@ -67,7 +67,7 @@ class User extends Authenticatable
     {
         // dd(config('filesystems.disks.public'));
         if ($this->profile_photo_path) {
-            return asset('storage/' . $this->profile_photo_path);
+            return $this->profile_photo_path;
         }
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
     }
