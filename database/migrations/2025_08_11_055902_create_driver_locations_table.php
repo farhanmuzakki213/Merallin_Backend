@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('driver_locations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('driver_id')->constrained('users')->onDelete('cascade'); // Asumsi driver ada di tabel users
-            $table->point('location', '4326'); // Tipe data GEOMETRY (Point) dengan SRID 4326 (standar GPS)
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->point('location', '4326');
             $table->timestamps();
         });
     }
