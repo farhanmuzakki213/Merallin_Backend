@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Concurrency\Driver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -40,5 +41,10 @@ class Trip extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function driverLocations()
+    {
+        return $this->hasMany(DriverLocation::class);
     }
 }
