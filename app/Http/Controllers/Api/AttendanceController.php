@@ -130,21 +130,31 @@ class AttendanceController extends Controller
 
     public function history(Request $request)
     {
-        $history = $request->user()->attendances()
-            ->latest()
+        $request->validate([
+            'date' => 'sometimes|date_format:Y-m-d',
+        ]);
+
+        $query = Attendance::with('user');
+
+        if ($request->has('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+        $history = $query->latest()
             ->get()
             ->map(function ($item) {
+                // Siapkan fallback jika relasi user terputus
+                $userName = $item->user ? $item->user->name : 'Pengguna tidak ditemukan';
                 return [
                     'id' => $item->id,
-                    'photo_url' => Storage::url($item->photo_path),
+                    'namaUser' => $userName,
+                    'photoUrl' => Storage::url($item->photo_path),
                     'latitude' => $item->latitude,
                     'longitude' => $item->longitude,
-                    'tipe_absensi' => $item->tipe_absensi,
-                    'status_absensi' => $item->status_absensi,
-                    'created_at' => $item->created_at->toDateTimeString(),
+                    'tipeAbsensi' => $item->tipe_absensi,
+                    'statusAbsensi' => $item->status_absensi,
+                    'createdAt' => $item->created_at->toIso8601String(),
                 ];
             });
-
         return response()->json($history);
     }
 }
