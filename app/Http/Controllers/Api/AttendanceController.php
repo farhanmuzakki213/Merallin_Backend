@@ -3,68 +3,129 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AttendanceController extends Controller
 {
 
+    /**
+     * Mengecek status absensi pengguna untuk hari ini.
+     */
+    public function statusToday(Request $request)
+    {
+        $user = $request->user();
+        $today = Carbon::today();
+
+        $hasClockedIn = Attendance::where('user_id', $user->id)
+            ->where('tipe_absensi', 'datang')
+            ->whereDate('created_at', $today)
+            ->exists();
+
+        $hasClockedOut = Attendance::where('user_id', $user->id)
+            ->where('tipe_absensi', 'pulang')
+            ->whereDate('created_at', $today)
+            ->exists();
+
+        return response()->json([
+            'has_clocked_in' => $hasClockedIn,
+            'has_clocked_out' => $hasClockedOut,
+        ]);
+    }
+
+    /**
+     * Melakukan absensi datang (clock-in).
+     */
     public function clockIn(Request $request)
     {
-        Log::info('Menerima permintaan absensi...');
-        try {
-            $request->validate([
-                'photo' => 'required|image',
-                'latitude' => 'required|numeric',
-                'longitude' => 'required|numeric',
-                'tipe_absensi' => 'required|in:datang,pulang',
-                'status_absensi' => 'required|in:Tepat waktu,Terlambat',
-            ]);
+        $request->validate([
+            'photo' => 'required|image',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+        ]);
 
-            Log::info('Validasi berhasil.');
-            $user = $request->user();
+        $user = $request->user();
+        $today = Carbon::today();
 
-            // Validasi keamanan
-            if ($request->is_mocked) {
-                Log::warning('Terdeteksi lokasi palsu dari user: ' . $user->id);
-                return response()->json(['message' => 'Terdeteksi menggunakan lokasi palsu.'], 403);
-            }
+        // VALIDASI: Cek apakah sudah absen datang hari ini
+        $alreadyClockedIn = Attendance::where('user_id', $user->id)
+            ->where('tipe_absensi', 'datang')
+            ->whereDate('created_at', $today)
+            ->exists();
 
-            // Simpan foto
-            $path = $request->file('photo')->store('public/attendance_photos');
-            Log::info('Foto berhasil disimpan di: ' . $path);
-
-            // Simpan data absensi
-            $user->attendances()->create([
-                'photo_path' => $path,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'tipe_absensi' => $request->tipe_absensi,
-                'status_absensi' => $request->status_absensi,
-            ]);
-            Log::info('Data absensi berhasil disimpan untuk user: ' . $user->id);
-
-            return response()->json(['message' => 'Absensi berhasil direkam.']);
-        } catch (ValidationException $e) {
-            // Jika validasi gagal, kirim respons error 422
-            Log::error('Gagal validasi: ', $e->errors());
-            return response()->json([
-                'message' => 'Data yang diberikan tidak valid.',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (Throwable $th) {
-            // Jika terjadi error lain (misal: gagal simpan file, masalah database, dll.)
-            // Log errornya untuk debugging di server
-            Log::error('Error Absensi: ' . $th->getMessage());
-
-            // Kirim respons error 500 ke frontend
-            return response()->json([
-                'message' => 'Terjadi kesalahan di server. Silakan coba lagi nanti.'
-            ], 500);
+        if ($alreadyClockedIn) {
+            return response()->json(['message' => 'Anda sudah melakukan absensi datang hari ini.'], 409); // 409 Conflict
         }
+
+        return $this->createAttendance($request, 'datang');
+    }
+
+    /**
+     * Melakukan absensi pulang (clock-out).
+     */
+    public function clockOut(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+        ]);
+
+        $user = $request->user();
+        $today = Carbon::today();
+
+        // VALIDASI 1: Cek apakah sudah absen datang hari ini
+        $hasClockedIn = Attendance::where('user_id', $user->id)
+            ->where('tipe_absensi', 'datang')
+            ->whereDate('created_at', $today)
+            ->exists();
+
+        if (!$hasClockedIn) {
+            return response()->json(['message' => 'Anda harus melakukan absensi datang terlebih dahulu.'], 422);
+        }
+
+        // VALIDASI 2: Cek apakah sudah absen pulang hari ini
+        $alreadyClockedOut = Attendance::where('user_id', $user->id)
+            ->where('tipe_absensi', 'pulang')
+            ->whereDate('created_at', $today)
+            ->exists();
+
+        if ($alreadyClockedOut) {
+            return response()->json(['message' => 'Anda sudah melakukan absensi pulang hari ini.'], 409);
+        }
+
+        return $this->createAttendance($request, 'pulang');
+    }
+
+    /**
+     * Fungsi helper untuk membuat record absensi.
+     */
+    private function createAttendance(Request $request, string $tipe)
+    {
+        $photoPath = $request->file('photo')->store('public/photos');
+
+        $status = 'Tepat waktu';
+        $now = now();
+        if ($tipe == 'datang' && $now->hour > 8) {
+            $status = 'Terlambat';
+        }
+
+        $attendance = Attendance::create([
+            'user_id' => $request->user()->id,
+            'photo_path' => $photoPath,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'tipe_absensi' => $tipe,
+            'status_absensi' => $status,
+        ]);
+
+        return response()->json([
+            'message' => 'Absensi ' . ucfirst($tipe) . ' berhasil direkam!',
+            'data' => $attendance
+        ], 201);
     }
 
     public function history(Request $request)

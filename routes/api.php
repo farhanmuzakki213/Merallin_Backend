@@ -24,6 +24,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rute untuk absensi karyawan
     Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn']);
+    Route::post('/attendance/clock-out', [AttendanceController::class, 'clockOut']);
+    Route::get('/attendance/status-today', [AttendanceController::class, 'statusToday']);
     Route::get('/attendance/history', [AttendanceController::class, 'history']);
 
     // Rute untuk Absensi Driver
