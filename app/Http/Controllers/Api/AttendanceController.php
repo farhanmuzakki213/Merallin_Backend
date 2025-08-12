@@ -76,8 +76,6 @@ class AttendanceController extends Controller
 
         $user = $request->user();
         $today = Carbon::today();
-
-        // VALIDASI 1: Cek apakah sudah absen datang hari ini
         $hasClockedIn = Attendance::where('user_id', $user->id)
             ->where('tipe_absensi', 'datang')
             ->whereDate('created_at', $today)
@@ -109,9 +107,13 @@ class AttendanceController extends Controller
 
         $status = 'Tepat waktu';
         $now = now();
-        if ($tipe == 'datang' && $now->hour > 8) {
+        if ($tipe == 'datang') {
+        $batasWaktuDatang = Carbon::createFromTimeString(config('company.clock_in_time'));
+
+        if ($now->isAfter($batasWaktuDatang)) {
             $status = 'Terlambat';
         }
+    }
 
         $attendance = Attendance::create([
             'user_id' => $request->user()->id,
