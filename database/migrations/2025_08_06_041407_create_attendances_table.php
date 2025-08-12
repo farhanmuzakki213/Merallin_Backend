@@ -19,7 +19,6 @@ return new class extends Migration
             $table->double('longitude', 11, 8);
             $table->enum('tipe_absensi', ['datang', 'pulang']);
             $table->enum('status_absensi', ['Tepat waktu', 'Terlambat']);
-            $table->boolean('is_mocked')->default(false);
             $table->timestamps();
         });
     }
