@@ -16,7 +16,6 @@ class Attendance extends Model
         'longitude',
         'tipe_absensi',
         'status_absensi',
-        'is_mocked',
     ];
 
     public function user()

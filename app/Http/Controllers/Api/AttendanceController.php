@@ -20,7 +20,6 @@ class AttendanceController extends Controller
                 'photo' => 'required|image',
                 'latitude' => 'required|numeric',
                 'longitude' => 'required|numeric',
-                'is_mocked' => 'required|boolean',
                 'tipe_absensi' => 'required|in:datang,pulang',
                 'status_absensi' => 'required|in:Tepat waktu,Terlambat',
             ]);
@@ -43,7 +42,6 @@ class AttendanceController extends Controller
                 'photo_path' => $path,
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
-                'is_mocked' => $request->is_mocked,
                 'tipe_absensi' => $request->tipe_absensi,
                 'status_absensi' => $request->status_absensi,
             ]);
