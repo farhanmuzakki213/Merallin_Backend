@@ -134,16 +134,16 @@ class AttendanceController extends Controller
             'date' => 'sometimes|date_format:Y-m-d',
         ]);
 
-        $query = Attendance::with('user');
+        $query = $request->user()->attendances();
 
         if ($request->has('date')) {
             $query->whereDate('created_at', $request->date);
         }
         $history = $query->latest()
             ->get()
-            ->map(function ($item) {
+            ->map(function ($item) use ($request){
                 // Siapkan fallback jika relasi user terputus
-                $userName = $item->user ? $item->user->name : 'Pengguna tidak ditemukan';
+                $userName = $request->user()->name;
                 return [
                     'id' => $item->id,
                     'namaUser' => $userName,
