@@ -2,23 +2,26 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Livewire\Volt\Volt;
 
-class RegistrationTest extends TestCase
-{
-    use RefreshDatabase;
+test('registration screen can be rendered', function () {
+    $response = $this->get('/register');
 
-    public function test_new_users_can_register(): void
-    {
-        $response = $this->post('/register', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-        ]);
+    $response
+        ->assertOk()
+        ->assertSeeVolt('pages.auth.register');
+});
 
-        $this->assertAuthenticated();
-        $response->assertNoContent();
-    }
-}
+test('new users can register', function () {
+    $component = Volt::test('pages.auth.register')
+        ->set('name', 'Test User')
+        ->set('email', 'test@example.com')
+        ->set('password', 'password')
+        ->set('password_confirmation', 'password');
+
+    $component->call('register');
+
+    $component->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+});

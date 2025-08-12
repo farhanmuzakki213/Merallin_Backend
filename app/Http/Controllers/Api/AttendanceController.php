@@ -21,7 +21,8 @@ class AttendanceController extends Controller
                 'latitude' => 'required|numeric',
                 'longitude' => 'required|numeric',
                 'is_mocked' => 'required|boolean',
-                // 'azure_person_id' => 'required|string', // Terima personId dari Flutter
+                'tipe_absensi' => 'required|in:datang,pulang',
+                'status_absensi' => 'required|in:Tepat waktu,Terlambat',
             ]);
 
             Log::info('Validasi berhasil.');
@@ -43,6 +44,8 @@ class AttendanceController extends Controller
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'is_mocked' => $request->is_mocked,
+                'tipe_absensi' => $request->tipe_absensi,
+                'status_absensi' => $request->status_absensi,
             ]);
             Log::info('Data absensi berhasil disimpan untuk user: ' . $user->id);
 
@@ -69,7 +72,6 @@ class AttendanceController extends Controller
     public function history(Request $request)
     {
         $history = $request->user()->attendances()
-            ->latest()
             ->get()
             ->map(function ($item) {
                 return [
@@ -77,6 +79,8 @@ class AttendanceController extends Controller
                     'photo_url' => Storage::url($item->photo_path),
                     'latitude' => $item->latitude,
                     'longitude' => $item->longitude,
+                    'tipe_absensi' => $item->tipe_absensi,
+                    'status_absensi' => $item->status_absensi,
                     'created_at' => $item->created_at->toDateTimeString(),
                 ];
             });

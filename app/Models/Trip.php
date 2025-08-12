@@ -42,9 +42,4 @@ class Trip extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    public function driverLocations()
-    {
-        return $this->hasMany(DriverLocation::class);
-    }
 }

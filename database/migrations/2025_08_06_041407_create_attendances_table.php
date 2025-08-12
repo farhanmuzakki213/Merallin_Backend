@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('photo_path');
             $table->double('latitude', 10, 8);
             $table->double('longitude', 11, 8);
+            $table->enum('tipe_absensi', ['datang', 'pulang']);
+            $table->enum('status_absensi', ['Tepat waktu', 'Terlambat']);
             $table->boolean('is_mocked')->default(false);
             $table->timestamps();
         });

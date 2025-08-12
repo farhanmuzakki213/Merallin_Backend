@@ -14,6 +14,8 @@ class Attendance extends Model
         'photo_path',
         'latitude',
         'longitude',
+        'tipe_absensi',
+        'status_absensi',
         'is_mocked',
     ];
 
