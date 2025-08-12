@@ -30,5 +30,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/requestTrip', [TripController::class, 'startTrip']);
     Route::post('/trips/{trip}/end', [TripController::class, 'endTrip']);
     Route::get('/trips/history', [TripController::class, 'getTrips']);
-    Route::post('/driver/location', [DriverLocationController::class, 'update']);
 });

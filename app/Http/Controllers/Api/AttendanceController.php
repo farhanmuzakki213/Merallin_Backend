@@ -70,6 +70,7 @@ class AttendanceController extends Controller
     public function history(Request $request)
     {
         $history = $request->user()->attendances()
+            ->latest()
             ->get()
             ->map(function ($item) {
                 return [
