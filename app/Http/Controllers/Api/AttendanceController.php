@@ -103,7 +103,7 @@ class AttendanceController extends Controller
      */
     private function createAttendance(Request $request, string $tipe)
     {
-        $photoPath = $request->file('photo')->store('public/photos');
+        $photoPath = $request->file('photo')->store('absen-photos', 'public');
 
         $status = 'Tepat waktu';
         $now = now();
