@@ -15,30 +15,22 @@ class ProfileController extends Controller
 {
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        // 1. Dapatkan pengguna dan data yang sudah divalidasi
     $user = $request->user();
     $validatedData = $request->validated();
 
-    // 2. Cek jika ada file foto baru yang diunggah
     if ($request->hasFile('photo')) {
-        // Hapus foto lama jika ada
         if ($user->profile_photo_path) {
-            // Konversi URL lama kembali ke path relatif untuk dihapus
             $oldPath = str_replace(Storage::url(''), '', $user->profile_photo_path);
             Storage::disk('public')->delete($oldPath);
         }
 
-        // Simpan foto baru di 'storage/app/public/profile-photos'
         $path = $request->file('photo')->store('profile-photos', 'public');
 
-        // Buat URL lengkap dan tambahkan ke data yang akan diupdate
         $validatedData['profile_photo_path'] = Storage::url($path);
     }
 
-    // 3. Update data pengguna dengan semua data baru (termasuk URL foto jika ada)
     $user->update($validatedData);
 
-    // 4. Kembalikan response dengan data pengguna yang sudah ter-update
     return response()->json([
         'message' => 'Profil berhasil diperbarui.',
         'user' => $user->fresh(),

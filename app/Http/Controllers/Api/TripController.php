@@ -15,8 +15,6 @@ class TripController extends Controller
     public function requestTrip(Request $request)
     {
         try {
-            // 1. Validasi input dari form pop-up
-            // Menyesuaikan validasi dengan data yang dibutuhkan untuk pengajuan.
             $validated = $request->validate([
                 'project_name' => 'required|string|max:255',
                 'origin'       => 'required|string|max:255',
@@ -25,40 +23,33 @@ class TripController extends Controller
 
             $user = $request->user();
 
-            // 2. Cek apakah driver masih memiliki trip yang aktif (belum selesai)
-            // Logika ini sudah benar untuk mencegah driver membuat trip baru jika masih ada yang aktif.
-            // Sebuah trip dianggap aktif jika 'ended_at' nya masih kosong (NULL).
             $activeTrip = Trip::where('user_id', $user->id)->whereNull('started_at')->first();
             if ($activeTrip) {
                 return response()->json([
                     'message' => 'Anda masih memiliki perjalanan yang aktif dan belum diselesaikan.'
-                ], 409); // 409 Conflict
+                ], 409);
             }
 
-            // 3. Buat record trip baru dengan status 'pengajuan'
-            // Menghapus field yang tidak perlu seperti license_plate, km, foto, dan koordinat.
             $trip = Trip::create([
-                'user_id'      => $user->id, // Diambil dari user yang login
+                'user_id'      => $user->id,
                 'project_name' => $validated['project_name'],
                 'origin'       => $validated['origin'],
                 'destination'  => $validated['destination'],
-                'status_trip'  => 'pengajuan', // Status diatur secara otomatis
+                'status_trip'  => 'pengajuan',
             ]);
 
             // 4. Beri respons sukses
             return response()->json([
                 'message' => 'Pengajuan perjalanan berhasil dibuat dan menunggu persetujuan.',
                 'trip'    => $trip
-            ], 201); // 201 Created
+            ], 201);
 
         } catch (ValidationException $e) {
-            // Jika validasi gagal, kembalikan error validasi
             return response()->json([
                 'message' => 'Data yang diberikan tidak valid.',
                 'errors' => $e->errors()
             ], 422);
         } catch (Throwable $th) {
-            // Tangkap semua error lainnya untuk mencegah aplikasi crash
             Log::error('Request Trip Error: ' . $th->getMessage());
             return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
         }
@@ -68,7 +59,6 @@ class TripController extends Controller
     public function endTrip(Request $request, Trip $trip)
     {
         try {
-            // Pastikan driver hanya bisa mengakhiri trip miliknya sendiri
             if ($request->user()->id !== $trip->user_id) {
                 return response()->json(['message' => 'Tidak diizinkan.'], 403);
             }
@@ -82,15 +72,12 @@ class TripController extends Controller
                 'longitude' => 'required|numeric',
             ]);
 
-            // Simpan foto selesai
             $trip->end_photo_path = $request->file('end_photo')->store('public/trip_photos');
 
-            // Simpan bukti bongkar jika ada
             if ($request->hasFile('end_delivery_letter')) {
                 $trip->end_delivery_letter_path = $request->file('end_delivery_letter')->store('public/delivery_letters');
             }
 
-            // Update data trip
             $trip->end_km = $validated['end_km'];
             $trip->status = $validated['status'];
             $trip->end_latitude = $validated['latitude'];
@@ -112,7 +99,6 @@ class TripController extends Controller
         try {
             $user = $request->user();
 
-            // Ambil semua trip milik user, urutkan dari yang terbaru
             $trips = $user->trips()->with('user')->latest()->get()->map(function ($trip) {
                 return [
                     'id' => $trip->id,
