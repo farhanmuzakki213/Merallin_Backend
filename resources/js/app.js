@@ -19,133 +19,6 @@ window.chart02 = chart02;
 window.chart03 = chart03;
 window.map01 = map01;
 
-function dataTableThree() {
-    return {
-        search: "",
-        sortColumn: "name",
-        sortDirection: "asc",
-        currentPage: 1,
-        perPage: 10,
-        data: [{
-            id: 1,
-            name: "Farhan",
-            email: "farhan@example.com",
-            position: "Web Developer",
-            office: "Bandung",
-            status: "Hired",
-            salary: "$120,000"
-        },
-        {
-            id: 2,
-            name: "Budi Santoso",
-            email: "budi.s@example.com",
-            position: "Project Manager",
-            office: "Jakarta",
-            status: "In Progress",
-            salary: "$150,000"
-        },
-        {
-            id: 3,
-            name: "Citra Lestari",
-            email: "citra.l@example.com",
-            position: "UI/UX Designer",
-            office: "Surabaya",
-            status: "Pending",
-            salary: "$95,000"
-        },
-        {
-            id: 4,
-            name: "Dewi Anjani",
-            email: "dewi.a@example.com",
-            position: "Backend Developer",
-            office: "Yogyakarta",
-            status: "Hired",
-            salary: "$110,000"
-        },
-        {
-            id: 5,
-            name: "Eko Prasetyo",
-            email: "eko.p@example.com",
-            position: "Frontend Developer",
-            office: "Semarang",
-            status: "Hired",
-            salary: "$105,000"
-        },
-        {
-            id: 6,
-            name: "Fajar Nugraha",
-            email: "fajar.n@example.com",
-            position: "DevOps Engineer",
-            office: "Bandung",
-            status: "In Progress",
-            salary: "$130,000"
-        },
-        {
-            id: 7,
-            name: "Gita Permata",
-            email: "gita.p@example.com",
-            position: "Data Scientist",
-            office: "Medan",
-            status: "Pending",
-            salary: "$140,000"
-        }
-        ],
-        get pagesAroundCurrent() {
-            let pages = [];
-            const start = Math.max(1, this.currentPage - 1);
-            const end = Math.min(this.totalPages, this.currentPage + 1);
-            for (let i = start; i <= end; i++) {
-                pages.push(i);
-            }
-            return pages;
-        },
-        get filteredData() {
-            const s = this.search.toLowerCase();
-            return this.data.filter(p => p.name.toLowerCase().includes(s) || p.position.toLowerCase().includes(
-                s) || p.office.toLowerCase().includes(s)).sort((a, b) => {
-                    const mod = this.sortDirection === 'asc' ? 1 : -1;
-                    if (a[this.sortColumn] < b[this.sortColumn]) return -1 * mod;
-                    if (a[this.sortColumn] > b[this.sortColumn]) return 1 * mod;
-                    return 0;
-                });
-        },
-        get paginatedData() {
-            const start = (this.currentPage - 1) * this.perPage;
-            return this.filteredData.slice(start, start + this.perPage);
-        },
-        get totalEntries() {
-            return this.filteredData.length;
-        },
-        get startEntry() {
-            return (this.currentPage - 1) * this.perPage + 1;
-        },
-        get endEntry() {
-            const end = this.currentPage * this.perPage;
-            return end > this.totalEntries ? this.totalEntries : end;
-        },
-        get totalPages() {
-            return Math.ceil(this.filteredData.length / this.perPage);
-        },
-        goToPage(page) {
-            if (page >= 1 && page <= this.totalPages) this.currentPage = page;
-        },
-        nextPage() {
-            if (this.currentPage < this.totalPages) this.currentPage++;
-        },
-        prevPage() {
-            if (this.currentPage > 1) this.currentPage--;
-        },
-        sortBy(column) {
-            if (this.sortColumn === column) {
-                this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
-            } else {
-                this.sortColumn = column;
-                this.sortDirection = "asc";
-            }
-        }
-    };
-}
-window.dataTableThree = dataTableThree;
 // Init flatpickr
 flatpickr(".datepicker", {
     mode: "range",
@@ -178,6 +51,66 @@ if (dropzoneArea.length) {
 
 // 1. Buat fungsi terpisah untuk inisialisasi komponen dasbor
 const initializeDashboardComponents = () => {
+    // ++ AWAL KODE BARU: Inisialisasi datepicker untuk tabel absensi
+    const datepickerEl = document.querySelector("#attendance-datepicker");
+
+    // Hanya jalankan jika elemen ada di halaman
+    if (datepickerEl) {
+        // Hancurkan instance flatpickr sebelumnya jika ada untuk mencegah duplikasi
+        if (datepickerEl._flatpickr) {
+            datepickerEl._flatpickr.destroy();
+        }
+
+        flatpickr(datepickerEl, {
+            mode: "range",
+            dateFormat: "M j, Y",
+            onClose: function(selectedDates, dateStr, instance) {
+                if (!dateStr) return;
+
+                // Temukan komponen Livewire induk dari elemen input
+                const componentEl = instance.element.closest('[wire\\:id]');
+                if (componentEl) {
+                    const component = Livewire.find(componentEl.getAttribute('wire:id'));
+                    // Kirim event ke komponen Livewire
+                    component.dispatch('date-updated', { date: dateStr });
+                }
+            },
+            plugins: [
+                new (function() {
+                    return function(fp) {
+                        return {
+                            onReady: function() {
+                                // Jangan tambahkan tombol jika sudah ada
+                                if (fp.calendarContainer.querySelector(".flatpickr-clear")) {
+                                    return;
+                                }
+
+                                const clearButton = document.createElement("button");
+                                clearButton.className = "flatpickr-button flatpickr-clear";
+                                clearButton.textContent = "Clear";
+                                clearButton.type = "button";
+
+                                clearButton.addEventListener("click", function(e) {
+                                    e.stopPropagation();
+
+                                    const componentEl = fp.element.closest('[wire\\:id]');
+                                    if (componentEl) {
+                                        const component = Livewire.find(componentEl.getAttribute('wire:id'));
+                                        fp.clear();
+                                        // Kirim event dengan nilai kosong untuk mereset filter
+                                        component.dispatch('date-updated', { date: '' });
+                                    }
+                                });
+
+                                fp.calendarContainer.appendChild(clearButton);
+                            }
+                        }
+                    }
+                })()
+            ]
+        });
+    }
+    // ++ AKHIR KODE BARU
 };
 
 // Panggil saat halaman pertama kali dimuat (initial load)
@@ -189,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener('livewire:navigated', () => {
     initializeDashboardComponents();
 });
+    
 
 // Get the current year
 const year = document.getElementById("year");

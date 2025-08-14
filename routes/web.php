@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\AttendanceTable;
 use App\Livewire\Dashboard;
 use App\Livewire\Profile;
 use App\Livewire\UserTable;
@@ -17,7 +18,9 @@ Route::middleware('auth')->group(function () {
     Route::get('profile', Profile::class)
         ->name('profile');
 
-    Route::get('/tables', UserTable::class)->name('tables');
+    Route::get('/users/table', UserTable::class)->name('users.table');
+
+    Route::get('/attendances/table', AttendanceTable::class)->name('attendances.table');
 });
 
 require __DIR__.'/auth.php';
