@@ -5,126 +5,242 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Trip;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
-use Throwable;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class TripController extends Controller
 {
-    public function requestTrip(Request $request)
+    // =================================================================
+    // FUNGSI UNTUK ADMIN
+    // =================================================================
+
+    /**
+     * Admin membuat trip baru, statusnya 'tersedia' untuk diambil driver.
+     */
+    public function storeByAdmin(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'project_name' => 'required|string|max:255',
-                'origin'       => 'required|string|max:255',
-                'destination'  => 'required|string|max:255',
-            ]);
+        $validated = $request->validate([
+            'project_name' => 'required|string|max:255',
+            'origin'       => 'required|string|max:255',
+            'destination'  => 'required|string|max:255',
+        ]);
 
-            $user = $request->user();
+        $trip = Trip::create([
+            'project_name' => $validated['project_name'],
+            'origin'       => $validated['origin'],
+            'destination'  => $validated['destination'],
+            'status_trip'  => 'tersedia', // Trip siap diambil driver
+        ]);
 
-            $activeTrip = Trip::where('user_id', $user->id)->whereNull('started_at')->first();
-            if ($activeTrip) {
-                return response()->json([
-                    'message' => 'Anda masih memiliki perjalanan yang aktif dan belum diselesaikan.'
-                ], 409);
-            }
-
-            $trip = Trip::create([
-                'user_id'      => $user->id,
-                'project_name' => $validated['project_name'],
-                'origin'       => $validated['origin'],
-                'destination'  => $validated['destination'],
-                'status_trip'  => 'pengajuan',
-            ]);
-
-            // 4. Beri respons sukses
-            return response()->json([
-                'message' => 'Pengajuan perjalanan berhasil dibuat dan menunggu persetujuan.',
-                'trip'    => $trip
-            ], 201);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Data yang diberikan tidak valid.',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (Throwable $th) {
-            Log::error('Request Trip Error: ' . $th->getMessage());
-            return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
-        }
+        return response()->json(['message' => 'Trip berhasil dibuat oleh Admin.', 'data' => $trip], 201);
     }
 
-    // Fungsi untuk mengakhiri perjalanan
-    public function endTrip(Request $request, Trip $trip)
+    // =================================================================
+    // FUNGSI UNTUK DRIVER
+    // =================================================================
+
+    /**
+     * Driver membuat trip sendiri.
+     */
+    public function storeByDriver(Request $request)
     {
-        try {
-            if ($request->user()->id !== $trip->user_id) {
-                return response()->json(['message' => 'Tidak diizinkan.'], 403);
-            }
+        $validated = $request->validate([
+            'project_name' => 'required|string|max:255',
+            'origin'       => 'required|string|max:255',
+            'destination'  => 'required|string|max:255',
+        ]);
 
-            $validated = $request->validate([
-                'end_km' => 'required|integer|gte:start_km',
-                'end_photo' => 'required|image|max:8192',
-                'end_delivery_letter' => 'required_if:status,bongkar|image|max:8192',
-                'status' => 'required|in:tiba,bongkar',
-                'latitude' => 'required|numeric',
-                'longitude' => 'required|numeric',
-            ]);
+        $trip = Trip::create([
+            'user_id'      => Auth::id(),
+            'project_name' => $validated['project_name'],
+            'origin'       => $validated['origin'],
+            'destination'  => $validated['destination'],
+            'status_trip'  => 'proses',
+        ]);
 
-            $trip->end_photo_path = $request->file('end_photo')->store('public/trip_photos');
-
-            if ($request->hasFile('end_delivery_letter')) {
-                $trip->end_delivery_letter_path = $request->file('end_delivery_letter')->store('public/delivery_letters');
-            }
-
-            $trip->end_km = $validated['end_km'];
-            $trip->status = $validated['status'];
-            $trip->end_latitude = $validated['latitude'];
-            $trip->end_longitude = $validated['longitude'];
-            $trip->ended_at = now();
-            $trip->save();
-
-            return response()->json(['message' => 'Perjalanan berhasil diselesaikan.', 'trip' => $trip]);
-        } catch (ValidationException  $e) {
-            throw $e;
-        } catch (Throwable $th) {
-            Log::error('End Trip Error: ' . $th->getMessage());
-            return response()->json(['message' => 'Terjadi kesalahan di server.'], 500);
-        }
+        return response()->json(['message' => 'Trip berhasil dibuat.', 'data' => $trip], 201);
     }
 
-    public function getTrips(Request $request)
+    /**
+     * Driver mengambil/menerima trip yang dibuat oleh Admin.
+     */
+    public function acceptTrip(Trip $trip)
     {
-        try {
-            $user = $request->user();
-
-            $trips = $user->trips()->with('user')->latest()->get()->map(function ($trip) {
-                return [
-                    'id' => $trip->id,
-                    'project_name' => $trip->project_name,
-                    'license_plate' => $trip->license_plate,
-                    'status_trip' => $trip->status_trip,
-                    'status_lokasi' => $trip->status_lokasi,
-                    'status_muatan' => $trip->status_muatan,
-                    'origin' => $trip->origin,
-                    'destination' => $trip->destination,
-                    'start_km' => $trip->start_km,
-                    'end_km' => $trip->end_km,
-                    'started_at' => $trip->started_at->toDateTimeString(),
-                    'ended_at' => $trip->ended_at?->toDateTimeString(),
-                    'start_photo_url' => Storage::url($trip->start_photo_path),
-                    'end_photo_url' => $trip->end_photo_path ? Storage::url($trip->end_photo_path) : null,
-                    'user' => [
-                        'name' => $trip->user->name,
-                    ]
-                ];
-            });
-
-            return response()->json($trips);
-        } catch (Throwable $th) {
-            Log::error('Get Trips Error: ' . $th->getMessage());
-            return response()->json(['message' => 'Gagal mengambil data perjalanan.'], 500);
+        // Pastikan trip tersedia dan belum diambil
+        if ($trip->status_trip !== 'tersedia' || $trip->user_id !== null) {
+            return response()->json(['message' => 'Trip ini tidak tersedia atau sudah diambil.'], 422);
         }
+
+        $trip->update([
+            'user_id'     => Auth::id(),
+            'status_trip' => 'proses',
+        ]);
+
+        return response()->json(['message' => 'Anda berhasil mengambil trip.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver mengupload data awal perjalanan.
+     */
+    public function updateStart(Request $request, Trip $trip)
+    {
+        $validated = $request->validate([
+            'license_plate'   => 'required|string|max:20',
+            'start_km'        => 'required|integer',
+            'start_km_photo'  => 'required|image|max:5120', // file, max 5MB
+        ]);
+
+        $path = $request->file('start_km_photo')->store('public/trip_photos');
+
+        $trip->update([
+            'license_plate'       => $validated['license_plate'],
+            'start_km'            => $validated['start_km'],
+            'start_km_photo_path' => $path,
+            'status_lokasi'       => 'menuju lokasi muat',
+            'status_muatan'       => 'kosong',
+        ]);
+
+        return response()->json(['message' => 'Data awal perjalanan berhasil diupdate.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver update status saat tiba di lokasi muat.
+     */
+    public function updateAtLoadingPoint(Trip $trip)
+    {
+        $trip->update([
+            'status_lokasi' => 'di lokasi muat',
+            'status_muatan' => 'proses muat',
+        ]);
+        return response()->json(['message' => 'Status berhasil diupdate: Tiba di lokasi muat.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver konfirmasi telah selesai melakukan proses muat.
+     */
+    public function finishLoading(Trip $trip)
+    {
+        $trip->update([
+            'status_muatan' => 'selesai muat',
+        ]);
+        return response()->json(['message' => 'Status berhasil diupdate: Proses muat selesai.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver mengupload data setelah selesai muat.
+     */
+    public function updateAfterLoading(Request $request, Trip $trip)
+    {
+        $validated = $request->validate([
+            'muat_photo'        => 'required|image|max:5120',
+            'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
+        ]);
+
+        $muatPath = $request->file('muat_photo')->store('public/trip_photos');
+        $suratJalanPath = $request->file('delivery_letter')->store('public/delivery_letters');
+
+        $trip->update([
+            'muat_photo_path'      => $muatPath,
+            'delivery_letter_path' => $suratJalanPath,
+            'status_lokasi'        => 'menuju lokasi bongkar',
+            'status_muatan'        => 'termuat',
+        ]);
+
+        return response()->json(['message' => 'Data muatan berhasil diupload.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver update status saat tiba di lokasi bongkar.
+     */
+    public function updateAtUnloadingPoint(Trip $trip)
+    {
+        $trip->update([
+            'status_lokasi' => 'di lokasi bongkar',
+            'status_muatan' => 'proses bongkar',
+        ]);
+        return response()->json(['message' => 'Status berhasil diupdate: Tiba di lokasi bongkar.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver konfirmasi telah selesai melakukan proses bongkar.
+     */
+    public function finishUnloading(Trip $trip)
+    {
+        $trip->update([
+            'status_muatan' => 'selesai bongkar',
+        ]);
+        return response()->json(['message' => 'Status berhasil diupdate: Proses bongkar selesai.', 'data' => $trip]);
+    }
+
+    /**
+     * Driver mengupload data akhir setelah selesai bongkar.
+     */
+    public function updateFinish(Request $request, Trip $trip)
+    {
+        $startKmValue = $trip->start_km;
+        $validated = $request->validate([
+            'bongkar_photo'     => 'required|image|max:5120',
+            'end_km_photo'      => 'required|image|max:5120',
+            'end_km'            => 'required|integer|gte:' . $startKmValue,
+            'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
+        ]);
+
+        $bongkarPath = $request->file('bongkar_photo')->store('public/trip_photos');
+        $endKmPath = $request->file('end_km_photo')->store('public/trip_photos');
+
+        $updateData = [
+            'bongkar_photo_path' => $bongkarPath,
+            'end_km_photo_path'  => $endKmPath,
+            'end_km'             => $validated['end_km'],
+            'status_trip'        => 'selesai',
+            'status_lokasi'      => null,
+            'status_muatan'      => null,
+        ];
+
+        if ($request->hasFile('delivery_letter')) {
+            $updateData['delivery_letter_path'] = $request->file('delivery_letter')->store('public/delivery_letters');
+        }
+
+        $trip->update($updateData);
+
+        return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
+    }
+
+    // =================================================================
+    // FUNGSI UNTUK MELIHAT DATA (GET)
+    // =================================================================
+
+    /**
+     * Melihat semua perjalanan (untuk Admin).
+     */
+    public function indexAdmin()
+    {
+        $trips = Trip::with('user')->latest()->get();
+        return response()->json($trips);
+    }
+
+    /**
+     * Melihat perjalanan yang tersedia atau yang sedang dijalani oleh driver.
+     */
+    public function indexDriver()
+    {
+        $driverId = Auth::id();
+        $trips = Trip::with('user')
+            ->where('status_trip', 'tersedia')
+            ->orWhere(function ($query) use ($driverId) {
+                $query->where('user_id', $driverId);
+            })
+            ->latest()
+            ->get();
+
+        return response()->json($trips);
+    }
+
+    /**
+     * Melihat detail satu perjalanan.
+     */
+    public function show(Trip $trip)
+    {
+        return response()->json($trip->load('user'));
     }
 }

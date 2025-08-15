@@ -13,32 +13,46 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Driver
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null'); // Driver, onDelete('set null') lebih aman
             $table->string('project_name');
-            $table->string('license_plate')->nullable();
-            $table->string('start_km_photo_path')->nullable();
-            $table->integer('start_km')->nullable();
-            $table->string('end_km_photo_path')->nullable();
-            $table->integer('end_km')->nullable();
             $table->string('origin');
             $table->string('destination');
 
-            // Data saat mulai trip
-            $table->string('start_photo_path')->nullable();
-            $table->string('delivery_letter_path')->nullable();
-            $table->double('start_latitude', 10, 8)->nullable();
-            $table->double('start_longitude', 11, 8)->nullable();
-            $table->timestamp('started_at')->nullable();
-            $table->enum('status_trip', ['pengajuan', 'acc', 'done'])->default('pengajuan');
-            $table->enum('status_lokasi', ['on site', 'tiba', 'dalam perjalanan'])->default('dalam perjalanan')->nullable();
-            $table->enum('status_muatan', ['bongkar', 'muat'])->nullable();
+            // Data Awal Perjalanan
+            $table->string('license_plate')->nullable();
+            $table->integer('start_km')->nullable();
+            $table->string('start_km_photo_path')->nullable();
 
-            // Data saat selesai trip
-            $table->string('end_photo_path')->nullable();
-            $table->string('end_delivery_letter_path')->nullable();
-            $table->double('end_latitude', 10, 8)->nullable();
-            $table->double('end_longitude', 11, 8)->nullable();
-            $table->timestamp('ended_at')->nullable();
+            // Data Proses Muat
+            $table->string('muat_photo_path')->nullable();
+
+            // Data Proses Bongkar & Selesai
+            $table->string('bongkar_photo_path')->nullable();
+            $table->integer('end_km')->nullable();
+            $table->string('end_km_photo_path')->nullable();
+
+            // Surat jalan bisa diupload 2x, kita satukan saja
+            $table->string('delivery_letter_path')->nullable();
+
+            // Status Utama
+            $table->enum('status_trip', ['tersedia', 'proses', 'selesai'])->default('tersedia');
+
+            // Status Detail (mengikuti alur)
+            $table->enum('status_lokasi', [
+                'menuju lokasi muat',
+                'di lokasi muat',
+                'menuju lokasi bongkar',
+                'di lokasi bongkar'
+            ])->nullable();
+
+            $table->enum('status_muatan', [
+                'kosong',
+                'proses muat',
+                'selesai muat',
+                'termuat',
+                'proses bongkar',
+                'selesai bongkar'
+            ])->nullable();
 
             $table->timestamps();
         });

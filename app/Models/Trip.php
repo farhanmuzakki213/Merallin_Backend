@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Concurrency\Driver;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Trip extends Model
 {
@@ -13,33 +15,91 @@ class Trip extends Model
     protected $fillable = [
         'user_id',
         'project_name',
-        'license_plate',
-        'start_km',
-        'end_km',
         'origin',
         'destination',
-        'start_photo_path',
+        'license_plate',
+        'start_km',
+        'start_km_photo_path',
+        'muat_photo_path',
+        'bongkar_photo_path',
+        'end_km_photo_path',
+        'end_km',
         'delivery_letter_path',
-        'start_latitude',
-        'start_longitude',
-        'started_at',
-        'status_trip',
         'status_lokasi',
         'status_muatan',
-        'end_photo_path',
-        'end_delivery_letter_path',
-        'end_latitude',
-        'end_longitude',
-        'ended_at',
+        'status_trip',
     ];
 
-    protected $casts = [
-        'started_at' => 'datetime',
-        'ended_at' => 'datetime',
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'full_start_km_photo_url',
+        'full_muat_photo_url',
+        'full_bongkar_photo_url',
+        'full_end_km_photo_url',
+        'full_delivery_letter_url',
     ];
 
-    public function user()
+    /**
+     * Mendefinisikan relasi ke User (Driver).
+     */
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // --- ACCESSORS UNTUK URL FOTO ---
+
+    /**
+     * Accessor untuk mendapatkan URL lengkap foto kilometer awal.
+     */
+    protected function fullStartKmPhotoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->start_km_photo_path ? Storage::url($this->start_km_photo_path) : null,
+        );
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL lengkap foto muat.
+     */
+    protected function fullMuatPhotoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->muat_photo_path ? Storage::url($this->muat_photo_path) : null,
+        );
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL lengkap foto bongkar.
+     */
+    protected function fullBongkarPhotoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->bongkar_photo_path ? Storage::url($this->bongkar_photo_path) : null,
+        );
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL lengkap foto kilometer akhir.
+     */
+    protected function fullEndKmPhotoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->end_km_photo_path ? Storage::url($this->end_km_photo_path) : null,
+        );
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL lengkap surat jalan.
+     */
+    protected function fullDeliveryLetterUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->delivery_letter_path ? Storage::url($this->delivery_letter_path) : null,
+        );
     }
 }

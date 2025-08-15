@@ -28,7 +28,7 @@ class StoreIzinRequest extends FormRequest
             'tanggal_mulai'   => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
             'alasan'          => ['nullable', 'string', 'max:1000'],
-            'bukti'           => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'], // file bukti, max 2MB
+            'bukti'           => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], // file bukti, max 2MB
         ];
     }
 }

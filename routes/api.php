@@ -26,10 +26,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/attendance/status-today', [AttendanceController::class, 'statusToday']);
     Route::get('/attendance/history', [AttendanceController::class, 'history']);
 
-    // Rute untuk Absensi Driver
-    Route::post('/requestTrip', [TripController::class, 'startTrip']);
-    Route::post('/trips/{trip}/end', [TripController::class, 'endTrip']);
-    Route::get('/trips/history', [TripController::class, 'getTrips']);
+    // Endpoint umum
+    Route::get('/trips/{trip}', [TripController::class, 'show']);
+
+    // --- RUTE UNTUK ADMIN ---
+    // Anda bisa menambahkan middleware role admin di sini jika perlu
+    Route::prefix('admin')->group(function () {
+        Route::get('/trips', [TripController::class, 'indexAdmin']);
+        Route::post('/trips', [TripController::class, 'storeByAdmin']);
+    });
+
+    // --- RUTE UNTUK DRIVER ---
+    Route::prefix('driver')->group(function () {
+        // Melihat daftar trip (tersedia & milik sendiri)
+        Route::get('/trips', [TripController::class, 'indexDriver']);
+
+        // Membuat trip sendiri
+        Route::post('/trips', [TripController::class, 'storeByDriver']);
+
+        // Mengambil trip dari admin
+        Route::post('/trips/{trip}/accept', [TripController::class, 'acceptTrip']);
+
+        // Update data perjalanan (menggunakan POST karena ada file upload)
+        Route::post('/trips/{trip}/start', [TripController::class, 'updateStart']);
+        Route::post('/trips/{trip}/at-loading', [TripController::class, 'updateAtLoadingPoint']);
+        Route::post('/trips/{trip}/finish-loading', [TripController::class, 'finishLoading']);
+        Route::post('/trips/{trip}/after-loading', [TripController::class, 'updateAfterLoading']);
+        Route::post('/trips/{trip}/at-unloading', [TripController::class, 'updateAtUnloadingPoint']);
+        Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
+        Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
+    });
 
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
 });
