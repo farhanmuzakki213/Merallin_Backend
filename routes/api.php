@@ -2,10 +2,8 @@
 
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\DriverLocationController;
-use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\IzinController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\ResetPasswordController;
 use App\Http\Controllers\Api\TripController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +30,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/requestTrip', [TripController::class, 'startTrip']);
     Route::post('/trips/{trip}/end', [TripController::class, 'endTrip']);
     Route::get('/trips/history', [TripController::class, 'getTrips']);
+
+    Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
 });

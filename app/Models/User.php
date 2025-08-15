@@ -81,4 +81,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Trip::class);
     }
+
+    public function izins()
+    {
+        return $this->hasMany(Izin::class);
+    }
 }
