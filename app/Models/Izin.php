@@ -32,7 +32,7 @@ class Izin extends Model
     protected function fullUrlBukti(): Attribute
     {
         return Attribute::make(
-            get: fn () => Storage::url($this->url_bukti),
+            get: fn () => $this->url_bukti ? Storage::url($this->url_bukti) : null,
         );
     }
 

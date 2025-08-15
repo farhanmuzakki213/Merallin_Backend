@@ -18,6 +18,13 @@ class IzinController extends Controller
     {
         $izins = Izin::where('user_id', Auth::id())->latest()->get();
 
+        if ($izins->isEmpty()) {
+            return response()->json([
+                'message' => 'Anda belum memiliki riwayat izin.',
+                'data'    => []
+            ], 200);
+        }
+
         return response()->json([
             'message' => 'Riwayat izin berhasil diambil.',
             'data' => $izins
