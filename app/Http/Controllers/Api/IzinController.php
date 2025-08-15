@@ -39,7 +39,7 @@ class IzinController extends Controller
         $validated = $request->validated();
 
         if ($request->hasFile('bukti')) {
-            $path = $request->file('bukti')->store('public/bukti_izin');
+            $path = $request->file('bukti')->store('bukti_izin', 'public');
             $validated['url_bukti'] = $path;
         }
 

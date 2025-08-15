@@ -90,7 +90,7 @@ class TripController extends Controller
             'start_km_photo'  => 'required|image|max:5120', // file, max 5MB
         ]);
 
-        $path = $request->file('start_km_photo')->store('public/trip_photos');
+        $path = $request->file('start_km_photo')->store('trip_photos/start_km_photo', 'public');
 
         $trip->update([
             'license_plate'       => $validated['license_plate'],
@@ -136,8 +136,8 @@ class TripController extends Controller
             'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
         ]);
 
-        $muatPath = $request->file('muat_photo')->store('public/trip_photos');
-        $suratJalanPath = $request->file('delivery_letter')->store('public/delivery_letters');
+        $muatPath = $request->file('muat_photo')->store('trip_photos/muat_photo', 'public');
+        $suratJalanPath = $request->file('delivery_letter')->store('trip_photos/delivery_letters', 'public');
 
         $trip->update([
             'muat_photo_path'      => $muatPath,
@@ -185,8 +185,8 @@ class TripController extends Controller
             'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
         ]);
 
-        $bongkarPath = $request->file('bongkar_photo')->store('public/trip_photos');
-        $endKmPath = $request->file('end_km_photo')->store('public/trip_photos');
+        $bongkarPath = $request->file('bongkar_photo')->store('trip_photos/bongkar_photo', 'public');
+        $endKmPath = $request->file('end_km_photo')->store('trip_photos/end_km_photo', 'public');
 
         $updateData = [
             'bongkar_photo_path' => $bongkarPath,
@@ -198,7 +198,7 @@ class TripController extends Controller
         ];
 
         if ($request->hasFile('delivery_letter')) {
-            $updateData['delivery_letter_path'] = $request->file('delivery_letter')->store('public/delivery_letters');
+            $updateData['delivery_letter_path'] = $request->file('delivery_letter')->store('trip_photos/delivery_letters', 'public');
         }
 
         $trip->update($updateData);
