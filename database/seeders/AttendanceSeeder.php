@@ -15,54 +15,56 @@ class AttendanceSeeder extends Seeder
      */
     public function run(): void
     {
-        // Hapus data lama jika ada
         Attendance::query()->delete();
-        $users = User::whereHas('roles', function ($query) {
-            $query->where('name', 'karyawan')->orWhere('name', 'driver');
-        })->get();
+
+        $users = User::whereHas('roles', fn($q) => $q->where('name','karyawan'))->get();
 
         if ($users->isEmpty()) {
-            $this->command->warn('Tidak ditemukan user dengan role "karyawan" atau "driver".');
-            $this->command->warn('Pastikan UserRoleSeeder sudah dijalankan terlebih dahulu.');
+            $this->command->warn('No employees or drivers found.');
             return;
         }
 
-        $this->command->info('Membuat data absensi untuk ' . $users->count() . ' user...');
+        $this->command->info('Creating attendance data for ' . $users->count() . ' users...');
 
-        // Buat data absensi selama 10 hari terakhir untuk setiap user
-        foreach ($users as $user) {
-            for ($i = 0; $i < 10; $i++) {
-                // Tentukan tanggal absensi
-                $date = Carbon::now()->subDays($i);
+        // Buat data absensi selama 15 hari terakhir
+        for ($i = 0; $i < 15; $i++) {
+            $date = Carbon::now()->subDays($i);
+
+            foreach ($users as $user) {
+                // 80% kemungkinan user akan absen pada hari ini
+                if (rand(1, 100) > 80) {
+                    continue; // Lewati user ini untuk hari ini, membuatnya "tidak hadir"
+                }
 
                 // Buat absensi datang
+                $clockInTime = $date->copy()->setHour(8)->setMinutes(rand(0, 45));
                 Attendance::create([
                     'user_id' => $user->id,
                     'photo_path' => 'photos/dummy_datang.jpg',
-                    'latitude' => -6.914744, // Contoh latitude Bandung
-                    'longitude' => 107.609810, // Contoh longitude Bandung
+                    'latitude' => -6.914744,
+                    'longitude' => 107.609810,
                     'tipe_absensi' => 'datang',
-                    // Tentukan status acak, 80% tepat waktu
                     'status_absensi' => (rand(1, 10) <= 8) ? 'Tepat waktu' : 'Terlambat',
-                    'created_at' => $date->copy()->setHour(8)->setMinutes(rand(0, 30))->setSeconds(rand(0, 59)),
-                    'updated_at' => $date->copy()->setHour(8)->setMinutes(rand(0, 30))->setSeconds(rand(0, 59)),
+                    'created_at' => $clockInTime,
+                    'updated_at' => $clockInTime,
                 ]);
 
-                // Buat absensi pulang (70% kemungkinan user sudah absen pulang)
+                // 70% kemungkinan user sudah absen pulang
                 if (rand(1, 10) <= 7) {
+                    $clockOutTime = $date->copy()->setHour(17)->setMinutes(rand(0, 59));
                     Attendance::create([
                         'user_id' => $user->id,
                         'photo_path' => 'photos/dummy_pulang.jpg',
                         'latitude' => -6.914744,
                         'longitude' => 107.609810,
                         'tipe_absensi' => 'pulang',
-                        'status_absensi' => 'Tepat waktu', // Asumsikan pulang selalu tepat waktu
-                        'created_at' => $date->copy()->setHour(17)->setMinutes(rand(0, 59))->setSeconds(rand(0, 59)),
-                        'updated_at' => $date->copy()->setHour(17)->setMinutes(rand(0, 59))->setSeconds(rand(0, 59)),
+                        'status_absensi' => 'Tepat waktu',
+                        'created_at' => $clockOutTime,
+                        'updated_at' => $clockOutTime,
                     ]);
                 }
             }
         }
-        $this->command->info('Data absensi berhasil dibuat.');
+        $this->command->info('Attendance data seeding completed.');
     }
 }

@@ -29,7 +29,7 @@ class TripController extends Controller
             'project_name' => $validated['project_name'],
             'origin'       => $validated['origin'],
             'destination'  => $validated['destination'],
-            'status_trip'  => 'tersedia', // Trip siap diambil driver
+            'status_trip'  => 'tersedia',
         ]);
 
         return response()->json(['message' => 'Trip berhasil dibuat oleh Admin.', 'data' => $trip], 201);

@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Attendance;
+use App\Models\Izin;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -30,62 +32,57 @@ class AttendanceTable extends Component
         $this->resetPage();
     }
 
+    private function getStatusClasses(string $status): string
+    {
+        return match ($status) {
+            'Sedang Bekerja' => 'bg-success-50 dark:bg-success-500/15 text-success-700 dark:text-success-500',
+            'Sudah Pulang' => 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-500',
+            'Belum Hadir', 'Tidak Hadir', 'Tidak Clock-out' => 'bg-error-50 dark:bg-error-500/15 text-error-700 dark:text-error-500',
+            default => 'bg-gray-100 dark:bg-gray-500/15 text-gray-700 dark:text-gray-400',
+        };
+    }
+
     public function render()
     {
-         // 1. Query dasar untuk mengambil data absensi
-        $query = Attendance::query()
+        // --- 1. LOGIKA UNTUK TABEL ABSENSI (TETAP SAMA) ---
+        $attendanceQuery = Attendance::query()
             ->with('user')
             ->whereHas('user', function ($q) {
-                // Filter berdasarkan pencarian nama
                 if ($this->search) {
                     $q->where('name', 'like', '%' . $this->search . '%');
                 }
-                // Filter hanya untuk role tertentu
                 $q->whereHas('roles', function ($roleQuery) {
                     $roleQuery->whereIn('name', ['karyawan', 'driver']);
                 });
             });
 
-        // 2. Terapkan filter rentang tanggal jika ada, jika tidak, gunakan tanggal hari ini
+        $startDate = today()->startOfDay();
+        $endDate = today()->endOfDay();
+        $isRange = false;
+
         if ($this->filterDate) {
             $dateParts = explode(' to ', $this->filterDate);
             $startDate = Carbon::createFromFormat('M j, Y', $dateParts[0])->startOfDay();
-            $endDate = count($dateParts) == 2 ? Carbon::createFromFormat('M j, Y', $dateParts[1])->endOfDay() : $startDate->copy()->endOfDay();
-            $query->whereBetween('attendances.created_at', [$startDate, $endDate]);
-        } else {
-            $query->whereDate('attendances.created_at', today());
+            if (count($dateParts) == 2) {
+                $endDate = Carbon::createFromFormat('M j, Y', $dateParts[1])->endOfDay();
+                $isRange = true;
+            } else {
+                $endDate = $startDate->copy()->endOfDay();
+            }
         }
 
-        // 3. Ambil semua data yang cocok dari database
-        $allAttendances = $query->orderBy('created_at', 'desc')->get();
+        $attendanceQuery->whereBetween('attendances.created_at', [$startDate, $endDate]);
 
-        // 4. Kelompokkan data berdasarkan hari dan ID pengguna
-        $groupedByDayAndUser = $allAttendances->groupBy(function ($item) {
-            return Carbon::parse($item->created_at)->format('Y-m-d') . '_' . $item->user_id;
-        });
+        $allAttendances = $attendanceQuery->orderBy('created_at', 'desc')->get();
+        $groupedByDayAndUser = $allAttendances->groupBy(fn($item) => Carbon::parse($item->created_at)->format('Y-m-d') . '_' . $item->user_id);
 
-        // 5. Transformasi data yang dikelompokkan ke dalam format yang diinginkan
         $attendanceData = $groupedByDayAndUser->map(function ($dayUserGroup) {
             $user = $dayUserGroup->first()->user;
-
-            if (!$user) {
-                return null;
-            }
-
+            if (!$user) return null;
             $clockIn = $dayUserGroup->firstWhere('tipe_absensi', 'datang');
             $clockOut = $dayUserGroup->firstWhere('tipe_absensi', 'pulang');
+            $status = $this->filterDate ? ($clockIn ? ($clockOut ? 'Sudah Pulang' : 'Tidak Clock-out') : 'Tidak Hadir') : ($clockIn ? ($clockOut ? 'Sudah Pulang' : 'Sedang Bekerja') : 'Belum Hadir');
 
-            // Logika untuk menentukan status harian pengguna
-            $status = 'Belum Hadir';
-            if ($this->filterDate) {
-                // Logika status untuk tampilan riwayat/filter
-                $status = $clockIn ? ($clockOut ? 'Sudah Pulang' : 'Tidak Clock-out') : 'Tidak Hadir';
-            } elseif ($clockIn) {
-                // Logika status untuk tampilan hari ini
-                $status = $clockOut ? 'Sudah Pulang' : 'Sedang Bekerja';
-            }
-
-            // Kembalikan data dalam format array yang Anda tentukan
             return [
                 'user_id' => $user->id,
                 'user_name' => $user->name,
@@ -93,28 +90,61 @@ class AttendanceTable extends Component
                 'clock_in_data' => $clockIn,
                 'clock_out_data' => $clockOut,
                 'status' => $status,
-                'attendance_date' => Carbon::parse($dayUserGroup->first()->created_at)->format('Y-m-d'),
+                'status_classes' => $this->getStatusClasses($status),
+                'attendance_date' => Carbon::parse($dayUserGroup->first()->created_at)->format('Y-m-d')
             ];
-        })->filter(); // Hapus item null jika ada user yang tidak ditemukan
+        })->filter()->sortByDesc(fn($item) => $item['attendance_date'] . '_' . $item['user_name'])->values();
 
-        // 6. [PENTING] Urutkan kembali data untuk memastikan urutan konsisten
-        $sortedAttendanceData = $attendanceData->sortByDesc(function ($item) {
-            // Urutkan berdasarkan tanggal (terbaru dulu), lalu nama untuk urutan yang stabil
-            return $item['attendance_date'] . '_' . $item['user_name'];
-        })->values(); // `values()` untuk mereset index array
+        $paginatedAttendances = new LengthAwarePaginator($attendanceData->forPage(Paginator::resolveCurrentPage('page'), $this->perPage), $attendanceData->count(), $this->perPage, Paginator::resolveCurrentPage('page'), ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page']);
 
-        // 7. Buat paginasi secara manual dari data yang sudah diproses dan diurutkan
-        $currentPage = Paginator::resolveCurrentPage('page');
-        $pagedData = $sortedAttendanceData->slice(($currentPage - 1) * $this->perPage, $this->perPage)->all();
-        $paginatedData = new LengthAwarePaginator(
-            $pagedData,
-            $sortedAttendanceData->count(),
-            $this->perPage,
-            $currentPage,
-            ['path' => Paginator::resolveCurrentPath()]
-        );
+        // --- 2. LOGIKA DIPERBAIKI UNTUK TABEL KARYAWAN TIDAK HADIR ---
+        $selectedDateTitle = $isRange ? $startDate->format('d M Y') . ' to ' . $endDate->format('d M Y') : $startDate->format('d M Y');
+        $absentUserData = collect();
+
+        $allRelevantUsers = User::query()->whereHas('roles', fn($q) => $q->whereIn('name', ['karyawan', 'driver']))->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))->orderBy('name')->get();
+
+        // Ambil semua data izin yang relevan dalam rentang tanggal untuk efisiensi
+        $leaveRecords = Izin::where(function ($query) use ($startDate, $endDate) {
+            $query->where('tanggal_mulai', '<=', $endDate)
+                ->where('tanggal_selesai', '>=', $startDate);
+        })->get()->keyBy(function ($item) {
+            // Buat kunci unik untuk pencarian cepat nanti
+            return $item->tanggal_mulai . '_' . $item->user_id;
+        });
+
+        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+            $dateToCheck = $date->format('Y-m-d');
+            $presentUserIds = Attendance::whereDate('created_at', $dateToCheck)->pluck('user_id')->unique();
+
+            $notPresentUsers = $allRelevantUsers->whereNotIn('id', $presentUserIds);
+
+            foreach ($notPresentUsers as $user) {
+                $leave = Izin::where('user_id', $user->id)
+                    ->where('tanggal_mulai', '<=', $dateToCheck)
+                    ->where('tanggal_selesai', '>=', $dateToCheck)
+                    ->first();
+
+                $status = $leave ? $leave->jenis_izin : 'Tidak Hadir';
+
+                $absentUserData->push([
+                    'user' => $user,
+                    'absent_date' => $date->format('Y-m-d'),
+                    'status' => $status,
+                    'status_classes' => $this->getStatusClasses($status)
+                ]);
+            }
+        }
+
+        $paginatedAbsentUsers = new LengthAwarePaginator($absentUserData->forPage(Paginator::resolveCurrentPage('absentPage'), $this->perPage), $absentUserData->count(), $this->perPage, Paginator::resolveCurrentPage('absentPage'), ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'absentPage']);
+
+        $itemsOnPage = collect($paginatedAbsentUsers->items());
+        $paginatedGroupedAbsentUsers = $itemsOnPage->groupBy('absent_date')->sortKeysDesc();
+
         return view('livewire.attendanceTable.attendance-table', [
-            'attendances' => $paginatedData,
+            'attendances' => $paginatedAttendances,
+            'absentUsers' => $paginatedAbsentUsers,
+            'groupedAbsentUsers' => $paginatedGroupedAbsentUsers,
+            'selectedDate' => $selectedDateTitle,
         ]);
     }
 }

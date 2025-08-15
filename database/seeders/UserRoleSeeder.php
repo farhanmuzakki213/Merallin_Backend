@@ -50,5 +50,7 @@ class UserRoleSeeder extends Seeder
             'password' => Hash::make('password')
         ]);
         $driver->assignRole($role_driver);
+        $karyawanUsers = User::factory(5)->create();
+        $karyawanUsers->each(fn($user) => $user->assignRole($role_karyawan));
     }
 }

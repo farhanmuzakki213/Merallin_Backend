@@ -176,4 +176,71 @@
             </div>
         </div>
     </div>
+    <div class="mt-8 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
+        <h3 class="mb-4 text-lg font-semibold text-gray-800 dark:text-white">
+            Absent Employees on {{ $selectedDate }}
+        </h3>
+        <div
+            class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="max-w-full overflow-x-auto">
+                <div class="min-w-[600px]">
+                    {{-- Header Tabel --}}
+                    <div class="grid grid-cols-12 border-t border-gray-200 dark:border-gray-800">
+                        <div
+                            class="col-span-9 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
+                            <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">User</p>
+                        </div>
+                        <div class="col-span-3 flex items-center px-4 py-3">
+                            <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">Status</p>
+                        </div>
+                    </div>
+
+
+                    {{-- Body Tabel --}}
+                    @forelse ($groupedAbsentUsers as $date => $absentItems)
+                        {{-- Tampilkan header tanggal baru --}}
+                        <div class="grid grid-cols-12 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+                            <div class="col-span-12 px-4 py-2">
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white/90">
+                                    {{ \Carbon\Carbon::parse($date)->format('l, d F Y') }}
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Loop untuk setiap user yang tidak hadir pada tanggal tersebut --}}
+                        @foreach ($absentItems as $item)
+                            <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
+                                {{-- Kolom User --}}
+                                <div class="col-span-9 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                                    <div>
+                                        <p class="text-theme-sm block font-medium text-gray-800 dark:text-white/90">
+                                            {{ $item['user']->name }}
+                                        </p>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $item['user']->email }}</span>
+                                    </div>
+                                </div>
+
+                                {{-- Kolom Status --}}
+                                <div class="col-span-3 flex items-center px-4 py-3">
+                                    <p class="{{ $item['status_classes'] }} text-theme-xs rounded-full px-2 py-0.5 font-medium">
+                                        {{ $item['status'] }}
+                                    </p>
+                                </div>
+                            </div>
+                        @endforeach
+                    @empty
+                        <div class="grid grid-cols-1 border-t border-gray-100 dark:border-gray-800">
+                            <div class="col-span-1 p-4 text-center text-gray-500 dark:text-gray-400">
+                                All employees are present or on leave for the selected period.
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 py-4 pr-4 pl-[18px] dark:border-gray-800">
+                {{ $absentUsers->links() }}
+            </div>
+        </div>
+    </div>
 </div>
