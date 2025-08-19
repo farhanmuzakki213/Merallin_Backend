@@ -183,7 +183,7 @@
         <div
             class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="max-w-full overflow-x-auto">
-                <div class="min-w-[600px]">
+                <div class="min-w-[1100px]">
                     {{-- Header Tabel --}}
                     <div class="grid grid-cols-12 border-t border-gray-200 dark:border-gray-800">
                         <div
