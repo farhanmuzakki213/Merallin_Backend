@@ -79,19 +79,38 @@
         {{-- Baris 2: Grafik (Menggunakan gaya dari chart-01 & chart-02) --}}
         {{-- =============================================================== --}}
         <div class="col-span-12 xl:col-span-8">
-            <div
-                class="overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Statistik Perjalanan</h3>
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
+                wire:ignore x-data x-init="window.initTripChart({{ json_encode($initialTripChart) }});"
+                x-on:trip-chart-updated.document="window.updateTripChart($event.detail.data)">
+                <div class="px-5 pt-5 sm:px-6 sm:pt-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+                            Statistik Perjalanan
+                        </h3>
+                        <div class="relative w-full sm:w-56">
+                            {{-- Pastikan ID ini sesuai dengan yang dipanggil di app.js --}}
+                            <input id="trip-chart-datepicker"
+                                class="h-10 w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-[34px] pr-4 text-theme-sm font-medium text-gray-700 shadow-theme-xs focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                                placeholder="Filter berdasarkan tanggal..." readonly="readonly" />
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <svg class="h-4 w-4 fill-gray-700 dark:fill-gray-400" viewBox="0 0 20 20"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd"
+                                        d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="max-w-full overflow-x-auto custom-scrollbar">
                     <div class="min-w-[650px] pl-2 xl:min-w-full">
-                        <div id="tripStatusBarChart" class="h-full min-w-[650px] pl-2 xl:min-w-full"
-                            data-series='{{ json_encode($tripStatusChart['data']) }}'
-                            data-labels='{{ json_encode($tripStatusChart['labels']) }}'>
-                        </div>
+                        <div id="tripStatusBarChart" class="h-full min-w-[650px] pl-2 xl:min-w-full"></div>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <div class="col-span-12 xl:col-span-4">
             <div

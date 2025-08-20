@@ -12,28 +12,35 @@ import "./components/calendar-init.js";
 import "./components/image-resize";
 
 
-// Init flatpickr
-flatpickr(".datepicker", {
-    mode: "range",
-    static: true,
-    monthSelectorType: "static",
-    dateFormat: "M j, Y",
-    defaultDate: [new Date().setDate(new Date().getDate() - 6), new Date()],
-    prevArrow:
-        '<svg class="stroke-current" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.25 6L9 12.25L15.25 18.5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    nextArrow:
-        '<svg class="stroke-current" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.75 19L15 12.75L8.75 6.5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    onReady: (selectedDates, dateStr, instance) => {
-        // eslint-disable-next-line no-param-reassign
-        instance.element.value = dateStr.replace("to", "-");
-        const customClass = instance.element.getAttribute("data-class");
-        instance.calendarContainer.classList.add(customClass);
-    },
-    onChange: (selectedDates, dateStr, instance) => {
-        // eslint-disable-next-line no-param-reassign
-        instance.element.value = dateStr.replace("to", "-");
-    },
-});
+/**
+ * =================================================================
+ * FUNGSI UTAMA: Inisialisasi Datepicker yang Dapat Digunakan Ulang
+ * =================================================================
+ * @param {string} elementId - ID dari elemen input datepicker.
+ * @param {string} eventName - Nama event Livewire yang akan di-dispatch.
+ * @param {Date|null} defaultDate - Tanggal default yang akan ditampilkan.
+ */
+const initDatepicker = (elementId, eventName, defaultDate = null) => {
+    const datepickerEl = document.querySelector(elementId);
+    if (!datepickerEl) return;
+
+    // Hancurkan instance sebelumnya untuk mencegah duplikasi saat navigasi Livewire
+    if (datepickerEl._flatpickr) {
+        datepickerEl._flatpickr.destroy();
+    }
+
+    flatpickr(datepickerEl, {
+        mode: "range",
+        static: true,
+        monthSelectorType: "static",
+        dateFormat: "M j, Y",
+        defaultDate: defaultDate || new Date(), // Gunakan tanggal yang diberikan atau hari ini
+        conjunction: " to ", // SECARA EKSPLISIT tentukan pemisah agar konsisten
+        onClose: (selectedDates, dateStr, instance) => {
+            Livewire.dispatch(eventName, { date: dateStr });
+        },
+    });
+};
 
 // Init Dropzone
 const dropzoneArea = document.querySelectorAll("#demo-upload");
@@ -42,32 +49,34 @@ if (dropzoneArea.length) {
     let myDropzone = new Dropzone("#demo-upload", { url: "/file/post" });
 }
 
-const initDashboardCharts = () => {
-    // Grafik 1: Status Perjalanan (Bar Chart)
+window.dashboardCharts = {};
+
+window.initTripChart = (initialData) => {
     const tripChartEl = document.querySelector('#tripStatusBarChart');
-    if (tripChartEl && tripChartEl.dataset.series && tripChartEl.dataset.labels) {
-        const tripSeries = JSON.parse(tripChartEl.dataset.series);
-        const tripLabels = JSON.parse(tripChartEl.dataset.labels);
+    if (!tripChartEl) return;
+    const options = {
+        series: [{ name: 'Jumlah Trip', data: initialData.data || [] }],
+        chart: { type: 'bar', height: 350, toolbar: { show: false } },
+        plotOptions: { bar: { columnWidth: '55%', borderRadius: 4 } },
+        dataLabels: { enabled: false },
+        xaxis: { categories: initialData.labels || [] },
+        colors: ["#3C50E0"],
+    };
+    const chart = new ApexCharts(tripChartEl, options);
+    chart.render();
+    window.dashboardCharts.tripChart = chart;
+};
 
-        const tripStatusBarChartOptions = {
-            series: [{
-                name: 'Jumlah Trip',
-                data: tripSeries
-            }],
-            chart: { type: 'bar', height: 350, toolbar: { show: false } },
-            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
-            dataLabels: { enabled: false },
-            xaxis: { categories: tripLabels }
-        };
-        // Hapus chart lama jika ada untuk mencegah duplikasi
-        if (tripChartEl.innerHTML) {
-            tripChartEl.innerHTML = '';
-        }
-        const tripChart = new ApexCharts(tripChartEl, tripStatusBarChartOptions);
-        tripChart.render();
+window.updateTripChart = (newData) => {
+    if (window.dashboardCharts.tripChart) {
+        window.dashboardCharts.tripChart.updateOptions({
+            series: [{ data: newData.data || [] }],
+            xaxis: { categories: newData.labels || [] }
+        });
     }
+};
 
-    // Grafik 2: Distribusi Role (Donut Chart)
+const initDonutChart = () => {
     const roleChartEl = document.querySelector('#userRoleDonutChart');
     if (roleChartEl && roleChartEl.dataset.series && roleChartEl.dataset.labels) {
         const roleSeries = JSON.parse(roleChartEl.dataset.series);
@@ -113,7 +122,6 @@ const initDashboardCharts = () => {
                 }
             }]
         };
-        // Hapus chart lama jika ada
         if (roleChartEl.innerHTML) {
             roleChartEl.innerHTML = '';
         }
@@ -122,23 +130,19 @@ const initDashboardCharts = () => {
     }
 };
 
-const initializeDashboardComponents = () => {
-    // ... (kode flatpickr untuk tabel absensi yang sudah ada)
-
-    // Panggil fungsi inisialisasi grafik dashboard
-    initDashboardCharts();
+const initializeComponents = () => {
+    initDatepicker('#trip-chart-datepicker', 'trip-date-updated', new Date());
+    initDatepicker('#attendance-datepicker', 'date-updated', new Date());
+    initDonutChart();
 };
 
-// Panggil saat halaman pertama kali dimuat (initial load)
 document.addEventListener("DOMContentLoaded", () => {
-    initializeDashboardComponents();
+    initializeComponents();
 });
 
-// Panggil lagi setiap kali Livewire selesai navigasi
 document.addEventListener('livewire:navigated', () => {
-    // Tambahkan sedikit delay untuk memastikan DOM sudah siap
     setTimeout(() => {
-        initializeDashboardComponents();
+        initializeComponents();
     }, 50);
 });
 

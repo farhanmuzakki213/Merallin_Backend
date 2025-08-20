@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserRoleSeeder::class,
             AttendanceSeeder::class,
             IzinSeeder::class,
+            TripSeeder::class
         ]);
     }
 }

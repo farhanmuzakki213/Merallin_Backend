@@ -28,10 +28,15 @@
                     <span class="text-gray-500 dark:text-gray-400"> entries </span>
                 </div>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div class="relative">
-                        <input id="attendance-datepicker" wire:key="attendance-datepicker"
+                    <div class="relative" wire:ignore x-data x-init="window.initDatepicker(
+                        '#attendance-datepicker',
+                        'date-updated',
+                        @js($initialDate)
+                    )">
+                        <input id="attendance-datepicker" x-ref="datepicker" {{-- Tambahkan x-ref untuk referensi Alpine --}}
+                            wire:key="attendance-datepicker"
                             class="h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                            placeholder="Filter by date..." data-class="right-0" />
+                            placeholder="Filter by date..." />
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                             <svg class="h-4 w-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                 fill="currentColor" viewBox="0 0 20 20">
@@ -199,7 +204,8 @@
                     {{-- Body Tabel --}}
                     @forelse ($groupedAbsentUsers as $date => $absentItems)
                         {{-- Tampilkan header tanggal baru --}}
-                        <div class="grid grid-cols-12 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+                        <div
+                            class="grid grid-cols-12 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
                             <div class="col-span-12 px-4 py-2">
                                 <p class="text-sm font-semibold text-gray-800 dark:text-white/90">
                                     {{ \Carbon\Carbon::parse($date)->format('l, d F Y') }}
@@ -211,18 +217,21 @@
                         @foreach ($absentItems as $item)
                             <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
                                 {{-- Kolom User --}}
-                                <div class="col-span-9 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                                <div
+                                    class="col-span-9 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
                                     <div>
                                         <p class="text-theme-sm block font-medium text-gray-800 dark:text-white/90">
                                             {{ $item['user']->name }}
                                         </p>
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ $item['user']->email }}</span>
+                                        <span
+                                            class="text-sm text-gray-500 dark:text-gray-400">{{ $item['user']->email }}</span>
                                     </div>
                                 </div>
 
                                 {{-- Kolom Status --}}
                                 <div class="col-span-3 flex items-center px-4 py-3">
-                                    <p class="{{ $item['status_classes'] }} text-theme-xs rounded-full px-2 py-0.5 font-medium">
+                                    <p
+                                        class="{{ $item['status_classes'] }} text-theme-xs rounded-full px-2 py-0.5 font-medium">
                                         {{ $item['status'] }}
                                     </p>
                                 </div>

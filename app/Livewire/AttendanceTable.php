@@ -24,11 +24,18 @@ class AttendanceTable extends Component
     public $search = '';
 
     public $filterDate = '';
+    public $initialDate = '';
+
+    public function mount(): void
+    {
+        $this->filterDate = today()->format('M j, Y');
+        $this->initialDate = $this->filterDate;
+    }
 
     #[On('date-updated')]
-    public function updateDateFilter($date = null)
+    public function updateDateFilter($date): void
     {
-        $this->filterDate = $date;
+        $this->filterDate = is_array($date) ? ($date['date'] ?? '') : $date;
         $this->resetPage();
     }
 
@@ -102,15 +109,6 @@ class AttendanceTable extends Component
         $absentUserData = collect();
 
         $allRelevantUsers = User::query()->whereHas('roles', fn($q) => $q->whereIn('name', ['karyawan', 'driver']))->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))->orderBy('name')->get();
-
-        // Ambil semua data izin yang relevan dalam rentang tanggal untuk efisiensi
-        $leaveRecords = Izin::where(function ($query) use ($startDate, $endDate) {
-            $query->where('tanggal_mulai', '<=', $endDate)
-                ->where('tanggal_selesai', '>=', $startDate);
-        })->get()->keyBy(function ($item) {
-            // Buat kunci unik untuk pencarian cepat nanti
-            return $item->tanggal_mulai . '_' . $item->user_id;
-        });
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             $dateToCheck = $date->format('Y-m-d');
