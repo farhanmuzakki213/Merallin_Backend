@@ -37,6 +37,42 @@ class TripController extends Controller
         return response()->json(['message' => 'Trip berhasil dibuat.', 'data' => $trip], 201);
     }
 
+    public function updateByDriver(Request $request, Trip $trip)
+    {
+        if ($trip->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk mengedit trip ini.'], 403);
+        }
+        if ($trip->status_trip !== 'proses' || $trip->start_km !== null) {
+            return response()->json(['message' => 'Trip tidak dapat diedit karena perjalanan sudah dimulai.'], 422);
+        }
+
+        $validated = $request->validate([
+            'project_name' => 'required|string|max:255',
+            'origin'       => 'required|string|max:255',
+            'destination'  => 'required|string|max:255',
+        ]);
+
+        $trip->update($validated);
+
+        return response()->json(['message' => 'Trip berhasil diperbarui.', 'data' => $trip]);
+    }
+
+    /**
+     * [BARU] Driver menghapus trip yang ia buat.
+     */
+    public function destroyByDriver(Trip $trip)
+    {
+        if ($trip->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus trip ini.'], 403);
+        }
+        if ($trip->status_trip !== 'proses' || $trip->start_km !== null) {
+            return response()->json(['message' => 'Trip tidak dapat dihapus karena perjalanan sudah dimulai.'], 422);
+        }
+        $trip->delete();
+
+        return response()->json(['message' => 'Trip berhasil dihapus.']);
+    }
+
     /**
      * Driver mengambil/menerima trip yang dibuat oleh Admin.
      */

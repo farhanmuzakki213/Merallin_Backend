@@ -37,6 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Membuat trip sendiri
         Route::post('/trips', [TripController::class, 'storeByDriver']);
+        Route::put('/trips/{trip}/update', [TripController::class, 'updateByDriver']);
+        Route::delete('/trips/{trip}/delete', [TripController::class, 'destroyByDriver']);
 
         // Mengambil trip dari admin
         Route::post('/trips/{trip}/accept', [TripController::class, 'acceptTrip']);
