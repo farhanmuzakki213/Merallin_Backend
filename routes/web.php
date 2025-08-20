@@ -2,6 +2,7 @@
 
 use App\Livewire\AttendanceTable;
 use App\Livewire\Dashboard;
+use App\Livewire\IzinTable;
 use App\Livewire\Profile;
 use App\Livewire\TripTable;
 use App\Livewire\UserTable;
@@ -24,6 +25,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendances/table', AttendanceTable::class)->name('attendances.table');
 
     Route::get('/trips/table', TripTable::class)->name('trips.table');
+
+    Route::get('/izin-karyawan', IzinTable::class)->name('izin.table');
 });
 
 require __DIR__.'/auth.php';
