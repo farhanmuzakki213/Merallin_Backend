@@ -30,13 +30,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Endpoint umum
     Route::get('/trips/{trip}', [TripController::class, 'show']);
 
-    // --- RUTE UNTUK ADMIN ---
-    // Anda bisa menambahkan middleware role admin di sini jika perlu
-    Route::prefix('admin')->group(function () {
-        Route::get('/trips', [TripController::class, 'indexAdmin']);
-        Route::post('/trips', [TripController::class, 'storeByAdmin']);
-    });
-
     // --- RUTE UNTUK DRIVER ---
     Route::prefix('driver')->group(function () {
         // Melihat daftar trip (tersedia & milik sendiri)

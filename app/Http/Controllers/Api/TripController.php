@@ -10,30 +10,6 @@ use Illuminate\Validation\Rule;
 
 class TripController extends Controller
 {
-    // =================================================================
-    // FUNGSI UNTUK ADMIN
-    // =================================================================
-
-    /**
-     * Admin membuat trip baru, statusnya 'tersedia' untuk diambil driver.
-     */
-    public function storeByAdmin(Request $request)
-    {
-        $validated = $request->validate([
-            'project_name' => 'required|string|max:255',
-            'origin'       => 'required|string|max:255',
-            'destination'  => 'required|string|max:255',
-        ]);
-
-        $trip = Trip::create([
-            'project_name' => $validated['project_name'],
-            'origin'       => $validated['origin'],
-            'destination'  => $validated['destination'],
-            'status_trip'  => 'tersedia',
-        ]);
-
-        return response()->json(['message' => 'Trip berhasil dibuat oleh Admin.', 'data' => $trip], 201);
-    }
 
     // =================================================================
     // FUNGSI UNTUK DRIVER
@@ -209,15 +185,6 @@ class TripController extends Controller
     // =================================================================
     // FUNGSI UNTUK MELIHAT DATA (GET)
     // =================================================================
-
-    /**
-     * Melihat semua perjalanan (untuk Admin).
-     */
-    public function indexAdmin()
-    {
-        $trips = Trip::with('user')->latest()->get();
-        return response()->json($trips);
-    }
 
     /**
      * Melihat perjalanan yang tersedia atau yang sedang dijalani oleh driver.
