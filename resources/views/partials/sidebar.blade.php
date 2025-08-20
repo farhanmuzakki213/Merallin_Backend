@@ -46,6 +46,7 @@
                             <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">Dashboard</span>
                         </a>
                     </li>
+                    @hasrole('admin')
                     <li>
                         <a href="{{ route('users.table') }}" wire:navigate @class([
                             'menu-item group',
@@ -64,6 +65,7 @@
                             <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">Users</span>
                         </a>
                     </li>
+                    @endhasrole
                     <li>
                         <a href="{{ route('attendances.table') }}" wire:navigate @class([
                             'menu-item group',
@@ -98,6 +100,24 @@
                                     fill="" />
                             </svg>
                             <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">Izin Karyawan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('lembur.table') }}" wire:navigate @class([
+                            'menu-item group',
+                            'menu-item-active' => request()->routeIs('lembur.table'),
+                            'menu-item-inactive' => !request()->routeIs('lembur.table'),
+                        ])>
+                            <svg @class([
+                                'menu-item-icon-active' => request()->routeIs('lembur.table'),
+                                'menu-item-icon-inactive' => !request()->routeIs('lembur.table'),
+                            ]) width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd"
+                                    d="M3.25 5.5C3.25 4.25736 4.25736 3.25 5.5 3.25H18.5C19.7426 3.25 20.75 4.25736 20.75 5.5V18.5C20.75 19.7426 19.7426 20.75 18.5 20.75H5.5C4.25736 20.75 3.25 19.7426 3.25 18.5V5.5ZM5.5 4.75C5.08579 4.75 4.75 5.08579 4.75 5.5V8.58325L19.25 8.58325V5.5C19.25 5.08579 18.9142 4.75 18.5 4.75H5.5ZM19.25 10.0833H15.416V13.9165H19.25V10.0833ZM13.916 10.0833L10.083 10.0833V13.9165L13.916 13.9165V10.0833ZM8.58301 10.0833H4.75V13.9165H8.58301V10.0833ZM4.75 18.5V15.4165H8.58301V19.25H5.5C5.08579 19.25 4.75 18.9142 4.75 18.5ZM10.083 19.25V15.4165L13.916 15.4165V19.25H10.083ZM15.416 19.25V15.4165H19.25V18.5C19.25 18.9142 18.9142 19.25 18.5 19.25H15.416Z"
+                                    fill="" />
+                            </svg>
+                            <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">Lembur Karyawan</span>
                         </a>
                     </li>
                     <li>

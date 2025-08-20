@@ -40,7 +40,7 @@ class Trip extends Model
         'full_muat_photo_url',
         'full_bongkar_photo_url',
         'full_end_km_photo_url',
-        'full_delivery_letter_url',
+        'full_delivery_letter_urls',
     ];
 
     /**
@@ -100,6 +100,20 @@ class Trip extends Model
     {
         return Attribute::make(
             get: fn () => $this->delivery_letter_path ? Storage::url($this->delivery_letter_path) : null,
+        );
+    }
+
+    protected function fullDeliveryLetterUrls(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (!$this->delivery_letter_path) {
+                    return [];
+                }
+                return array_map(function ($path) {
+                    return Storage::url($path);
+                }, $this->delivery_letter_path);
+            }
         );
     }
 }

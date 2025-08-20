@@ -19,9 +19,39 @@ class UserRoleSeeder extends Seeder
         $role_karyawan = Role::firstOrCreate(['name' => 'karyawan']);
         $role_driver = Role::firstOrCreate(['name' => 'driver']);
         $role_admin = Role::firstOrCreate(['name' => 'admin']);
+        $role_direksi = Role::firstOrCreate(['name' => 'direksi']);
+        $role_manager = Role::firstOrCreate(['name' => 'manager']);
 
 
         // Create Admin User
+
+        $manager = User::factory()->create([
+            'name' => 'manager1',
+            'email' => 'manager1@example.com',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '081234567002',
+            'password' => Hash::make('password')
+        ]);
+        $manager->assignRole($role_manager);
+        
+        $direksi = User::factory()->create([
+            'name' => 'direksi1',
+            'email' => 'direksi1@example.com',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '081234567002',
+            'password' => Hash::make('password')
+        ]);
+        $direksi->assignRole($role_direksi);
+
+        $direksi = User::factory()->create([
+            'name' => 'direksi2',
+            'email' => 'direksi2@example.com',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '081234567002',
+            'password' => Hash::make('password')
+        ]);
+        $direksi->assignRole($role_direksi);
+
         $admin = User::factory()->create([
             'name' => 'Administrator',
             'email' => 'admin@example.com',

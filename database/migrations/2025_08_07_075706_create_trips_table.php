@@ -32,7 +32,7 @@ return new class extends Migration
             $table->string('end_km_photo_path')->nullable();
 
             // Surat jalan bisa diupload 2x, kita satukan saja
-            $table->string('delivery_letter_path')->nullable();
+            $table->json('delivery_letter_path')->nullable();
 
             // Status Utama
             $table->enum('status_trip', ['tersedia', 'proses', 'selesai'])->default('tersedia');

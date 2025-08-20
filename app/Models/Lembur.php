@@ -15,7 +15,7 @@ class Lembur extends Model
      *
      * @var string
      */
-    protected $table = 'lembur';
+    protected $table = 'lemburs';
 
     /**
      * The attributes that are mass assignable.
@@ -30,6 +30,9 @@ class Lembur extends Model
         'keterangan_lembur',
         'mulai_jam_lembur',
         'selesai_jam_lembur',
+        'status_lembur',
+        'persetujuan_manajer',
+        'persetujuan_direksi',
     ];
 
     /**

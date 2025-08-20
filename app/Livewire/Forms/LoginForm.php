@@ -38,7 +38,7 @@ class LoginForm extends Form
             ]);
         }
 
-        if (! Auth::user()->hasRole('admin')) {   
+        if (! Auth::user()->hasAnyRole('admin','direksi','manager')) {
             Auth::logout();
             throw ValidationException::withMessages([
                 'form.email' => __('Hanya akun dengan peran admin yang dapat login.'),

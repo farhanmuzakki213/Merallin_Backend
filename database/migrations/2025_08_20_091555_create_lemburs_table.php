@@ -11,15 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('lembur', function (Blueprint $table) {
+        Schema::create('lemburs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->enum('jenis_hari', ['Kerja', 'Libur', 'Libur Nasional']);
-            $table->enum('department', ['IT', 'Marketing']);
+            $table->enum('department', ['Finance', 'Manager Operasional', 'HRD', 'IT', 'Admin']);
             $table->date('tanggal_lembur');
             $table->text('keterangan_lembur');
             $table->time('mulai_jam_lembur');
             $table->time('selesai_jam_lembur');
+            $table->enum('status_lembur', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
+            $table->enum('persetujuan_direksi', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
+            $table->enum('persetujuan_manajer', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
             $table->timestamps();
         });
     }

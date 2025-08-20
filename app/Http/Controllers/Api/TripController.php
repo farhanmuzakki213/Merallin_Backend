@@ -99,7 +99,7 @@ class TripController extends Controller
         $validated = $request->validate([
             'license_plate'   => 'required|string|max:20',
             'start_km'        => 'required|integer',
-            'start_km_photo'  => 'required|image|max:5120', // file, max 5MB
+            'start_km_photo'  => 'required|image|max:5120',
         ]);
 
         $path = $request->file('start_km_photo')->store('trip_photos/start_km_photo', 'public');
@@ -145,15 +145,22 @@ class TripController extends Controller
     {
         $validated = $request->validate([
             'muat_photo'        => 'required|image|max:5120',
-            'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
+            'delivery_letters'    => 'required|array',
+            'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
         ]);
 
         $muatPath = $request->file('muat_photo')->store('trip_photos/muat_photo', 'public');
-        $suratJalanPath = $request->file('delivery_letter')->store('trip_photos/delivery_letters', 'public');
+        $initialLetterPaths = [];
+        if ($request->hasFile('delivery_letters')) {
+            foreach ($request->file('delivery_letters') as $file) {
+                $initialLetterPaths[] = $file->store('trip_photos/delivery_letters', 'public');
+            }
+        }
+        $deliveryData = ['initial_letters' => $initialLetterPaths];
 
         $trip->update([
             'muat_photo_path'      => $muatPath,
-            'delivery_letter_path' => $suratJalanPath,
+            'delivery_letter_path' => $deliveryData,
             'status_lokasi'        => 'menuju lokasi bongkar',
             'status_muatan'        => 'termuat',
         ]);
@@ -194,26 +201,29 @@ class TripController extends Controller
             'bongkar_photo'     => 'required|image|max:5120',
             'end_km_photo'      => 'required|image|max:5120',
             'end_km'            => 'required|integer|gte:' . $startKmValue,
-            'delivery_letter'   => 'required|file|mimes:jpg,png,pdf|max:5120',
+            'delivery_letters'    => 'required|array',
+            'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
         ]);
 
         $bongkarPath = $request->file('bongkar_photo')->store('trip_photos/bongkar_photo', 'public');
         $endKmPath = $request->file('end_km_photo')->store('trip_photos/end_km_photo', 'public');
+        $finalLetterPaths = [];
+        if ($request->hasFile('delivery_letters')) {
+            foreach ($request->file('delivery_letters') as $file) {
+                $finalLetterPaths[] = $file->store('trip_photos/delivery_letters', 'public');
+            }
+        }
+        $deliveryData['final_letters'] = $finalLetterPaths;
 
-        $updateData = [
+        $trip->update([
             'bongkar_photo_path' => $bongkarPath,
             'end_km_photo_path'  => $endKmPath,
             'end_km'             => $validated['end_km'],
+            'delivery_letter_path' => $deliveryData,
             'status_trip'        => 'selesai',
             'status_lokasi'      => null,
             'status_muatan'      => null,
-        ];
-
-        if ($request->hasFile('delivery_letter')) {
-            $updateData['delivery_letter_path'] = $request->file('delivery_letter')->store('trip_photos/delivery_letters', 'public');
-        }
-
-        $trip->update($updateData);
+        ]);
 
         return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
     }

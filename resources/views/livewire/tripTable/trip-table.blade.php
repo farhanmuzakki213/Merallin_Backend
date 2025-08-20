@@ -17,6 +17,7 @@
         </div>
     @endif
 
+    @hasrole('admin')
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
         <div
             class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -172,10 +173,13 @@
             </div>
         </div>
     </div>
+    @endhasrole
 
     <div class="mt-12">
         <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
+            @hasrole('admin')
             <h3 class="mb-4 text-xl font-semibold text-gray-800 dark:text-white/90">Tabel Detail Trip</h3>
+            @endhasrole
             <div
                 class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
                 <div class="mb-4 flex flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
