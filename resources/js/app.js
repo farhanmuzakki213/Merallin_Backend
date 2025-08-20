@@ -3,21 +3,14 @@ import "jsvectormap/dist/jsvectormap.css";
 import "flatpickr/dist/flatpickr.css";
 import "dropzone/dist/dropzone.css";
 import "../css/app.css";
+import ApexCharts from "apexcharts";
 
 import flatpickr from "flatpickr";
 import Dropzone from "dropzone";
 
-import chart01 from "./components/charts/chart-01";
-import chart02 from "./components/charts/chart-02";
-import chart03 from "./components/charts/chart-03";
-import map01 from "./components/map-01";
 import "./components/calendar-init.js";
 import "./components/image-resize";
 
-window.chart01 = chart01;
-window.chart02 = chart02;
-window.chart03 = chart03;
-window.map01 = map01;
 
 // Init flatpickr
 flatpickr(".datepicker", {
@@ -49,68 +42,91 @@ if (dropzoneArea.length) {
     let myDropzone = new Dropzone("#demo-upload", { url: "/file/post" });
 }
 
-// 1. Buat fungsi terpisah untuk inisialisasi komponen dasbor
-const initializeDashboardComponents = () => {
-    // ++ AWAL KODE BARU: Inisialisasi datepicker untuk tabel absensi
-    const datepickerEl = document.querySelector("#attendance-datepicker");
+const initDashboardCharts = () => {
+    // Grafik 1: Status Perjalanan (Bar Chart)
+    const tripChartEl = document.querySelector('#tripStatusBarChart');
+    if (tripChartEl && tripChartEl.dataset.series && tripChartEl.dataset.labels) {
+        const tripSeries = JSON.parse(tripChartEl.dataset.series);
+        const tripLabels = JSON.parse(tripChartEl.dataset.labels);
 
-    // Hanya jalankan jika elemen ada di halaman
-    if (datepickerEl) {
-        // Hancurkan instance flatpickr sebelumnya jika ada untuk mencegah duplikasi
-        if (datepickerEl._flatpickr) {
-            datepickerEl._flatpickr.destroy();
+        const tripStatusBarChartOptions = {
+            series: [{
+                name: 'Jumlah Trip',
+                data: tripSeries
+            }],
+            chart: { type: 'bar', height: 350, toolbar: { show: false } },
+            plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4 } },
+            dataLabels: { enabled: false },
+            xaxis: { categories: tripLabels }
+        };
+        // Hapus chart lama jika ada untuk mencegah duplikasi
+        if (tripChartEl.innerHTML) {
+            tripChartEl.innerHTML = '';
         }
+        const tripChart = new ApexCharts(tripChartEl, tripStatusBarChartOptions);
+        tripChart.render();
+    }
 
-        flatpickr(datepickerEl, {
-            mode: "range",
-            dateFormat: "M j, Y",
-            onClose: function(selectedDates, dateStr, instance) {
-                if (!dateStr) return;
+    // Grafik 2: Distribusi Role (Donut Chart)
+    const roleChartEl = document.querySelector('#userRoleDonutChart');
+    if (roleChartEl && roleChartEl.dataset.series && roleChartEl.dataset.labels) {
+        const roleSeries = JSON.parse(roleChartEl.dataset.series);
+        const roleLabels = JSON.parse(roleChartEl.dataset.labels);
 
-                // Temukan komponen Livewire induk dari elemen input
-                const componentEl = instance.element.closest('[wire\\:id]');
-                if (componentEl) {
-                    const component = Livewire.find(componentEl.getAttribute('wire:id'));
-                    // Kirim event ke komponen Livewire
-                    component.dispatch('date-updated', { date: dateStr });
-                }
-            },
-            plugins: [
-                new (function() {
-                    return function(fp) {
-                        return {
-                            onReady: function() {
-                                // Jangan tambahkan tombol jika sudah ada
-                                if (fp.calendarContainer.querySelector(".flatpickr-clear")) {
-                                    return;
-                                }
-
-                                const clearButton = document.createElement("button");
-                                clearButton.className = "flatpickr-button flatpickr-clear";
-                                clearButton.textContent = "Clear";
-                                clearButton.type = "button";
-
-                                clearButton.addEventListener("click", function(e) {
-                                    e.stopPropagation();
-
-                                    const componentEl = fp.element.closest('[wire\\:id]');
-                                    if (componentEl) {
-                                        const component = Livewire.find(componentEl.getAttribute('wire:id'));
-                                        fp.clear();
-                                        // Kirim event dengan nilai kosong untuk mereset filter
-                                        component.dispatch('date-updated', { date: '' });
-                                    }
-                                });
-
-                                fp.calendarContainer.appendChild(clearButton);
+        const userRoleDonutChartOptions = {
+            series: roleSeries,
+            chart: { type: 'donut', height: 380 },
+            labels: roleLabels,
+            colors: ["#3C50E0", "#6577F3", "#80CAEE"],
+            legend: { show: true, position: 'bottom' },
+            dataLabels: {
+            enabled: true,
+            dropShadow: {
+                enabled: false,
+            }
+        },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                fontSize: '18px',
+                                fontWeight: 600,
+                            },
+                            value: {
+                                show: true,
+                                fontSize: '24px',
+                                fontWeight: 800,
                             }
                         }
                     }
-                })()
-            ]
-        });
+                }
+            },
+            responsive: [{
+                breakpoint: 640,
+                options: {
+                    chart: { width: 250 },
+                    legend: { position: 'bottom' }
+                }
+            }]
+        };
+        // Hapus chart lama jika ada
+        if (roleChartEl.innerHTML) {
+            roleChartEl.innerHTML = '';
+        }
+        const roleChart = new ApexCharts(roleChartEl, userRoleDonutChartOptions);
+        roleChart.render();
     }
-    // ++ AKHIR KODE BARU
+};
+
+const initializeDashboardComponents = () => {
+    // ... (kode flatpickr untuk tabel absensi yang sudah ada)
+
+    // Panggil fungsi inisialisasi grafik dashboard
+    initDashboardCharts();
 };
 
 // Panggil saat halaman pertama kali dimuat (initial load)
@@ -118,11 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeDashboardComponents();
 });
 
-// 3. Panggil lagi setiap kali Livewire selesai navigasi
+// Panggil lagi setiap kali Livewire selesai navigasi
 document.addEventListener('livewire:navigated', () => {
-    initializeDashboardComponents();
+    // Tambahkan sedikit delay untuk memastikan DOM sudah siap
+    setTimeout(() => {
+        initializeDashboardComponents();
+    }, 50);
 });
-    
+
+
 
 // Get the current year
 const year = document.getElementById("year");
