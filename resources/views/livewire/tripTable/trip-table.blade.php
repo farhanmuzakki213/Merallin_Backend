@@ -265,7 +265,7 @@
                                     @endif
                                 </div>
                                 <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
-                                    {{ $trip->created_at->format('d/m/y H:i') }}</div>
+                                    {{ $trip->created_at ? $trip->created_at->format('d/m/y H:i') : 'N/A' }}</div>
                                 {{-- Tombol Dokumen Foto Lainnya --}}
                                 <div class="col-span-1 flex items-center flex-wrap items-center gap-2 p-3">
                                     @php $other_photos = ['Muat' => $trip->muat_photo_path, 'Bongkar' => $trip->bongkar_photo_path, 'SJ' => $trip->delivery_letter_path]; @endphp
