@@ -265,7 +265,7 @@
                                     @endif
                                 </div>
                                 <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
-                                    {{ $trip->created_at ? $trip->created_at->format('d/m/y H:i') : $trip->updated_at ? $trip->updated_at->format('d/m/y H:i') : 'N/A' }}
+                                    {{ ($trip->created_at ?? $trip->updated_at)?->format('d/m/y H:i') ?? 'N/A' }}
                                 </div>
                                 {{-- Tombol Dokumen Foto Lainnya --}}
                                 <div class="col-span-1 flex items-center flex-wrap items-center gap-2 p-3">
