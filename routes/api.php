@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\IzinController;
+use App\Http\Controllers\Api\LemburController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TripController;
 use Illuminate\Http\Request;
@@ -55,7 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/at-unloading', [TripController::class, 'updateAtUnloadingPoint']);
         Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
         Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
-    });
 
+    });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
+    Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);
+
 });

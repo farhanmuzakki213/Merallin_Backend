@@ -86,4 +86,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Izin::class);
     }
+
+    public function lemburs()
+    {
+        return $this->hasMany(Lembur::class);
+    }
 }
