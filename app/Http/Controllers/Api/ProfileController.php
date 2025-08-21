@@ -30,10 +30,11 @@ class ProfileController extends Controller
     }
 
     $user->update($validatedData);
+    $user->load('roles');
 
     return response()->json([
         'message' => 'Profil berhasil diperbarui.',
-        'user' => $user->fresh(),
+        'user' => $user,
     ], 200);
     }
 
