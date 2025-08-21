@@ -17,7 +17,7 @@
         <div class="relative flex h-full w-1/2 flex-col items-center justify-center">
             <h3
                 class="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-lg bg-white/10 px-4 py-2 text-lg font-semibold text-white backdrop-blur-sm">
-                Surat Jalan Awal (Initial)
+                Surat Jalan Awal
             </h3>
             @if (!empty($initialLetters))
                 <img src="{{ \Illuminate\Support\Facades\Storage::url($initialLetters[$currentInitialIndex]) }}"
@@ -58,7 +58,7 @@
         <div class="relative flex h-full w-1/2 flex-col items-center justify-center">
             <h3
                 class="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-lg bg-white/10 px-4 py-2 text-lg font-semibold text-white backdrop-blur-sm">
-                Surat Jalan Akhir (Final)
+                Surat Jalan Akhir
             </h3>
             @if (!empty($finalLetters))
                 <img src="{{ \Illuminate\Support\Facades\Storage::url($finalLetters[$currentFinalIndex]) }}"
