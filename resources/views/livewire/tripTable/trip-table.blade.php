@@ -273,14 +273,25 @@
                                 </div>
                                 {{-- Tombol Dokumen Foto Lainnya --}}
                                 <div class="col-span-1 flex items-center flex-wrap items-center gap-2 p-3">
-                                    @php $other_photos = ['Muat' => $trip->muat_photo_path, 'Bongkar' => $trip->bongkar_photo_path, 'SJ' => $trip->delivery_letter_path]; @endphp
-                                    @foreach ($other_photos as $label => $path)
-                                        @if ($path)
-                                            <button
-                                                wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($path) }}')"
-                                                class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">{{ $label }}</button>
-                                        @endif
-                                    @endforeach
+                                    {{-- Tombol untuk foto Muat --}}
+                                    @if ($trip->muat_photo_path)
+                                        <button
+                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->muat_photo_path) }}')"
+                                            class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Muat</button>
+                                    @endif
+
+                                    {{-- Tombol untuk foto Bongkar --}}
+                                    @if ($trip->bongkar_photo_path)
+                                        <button
+                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->bongkar_photo_path) }}')"
+                                            class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Bongkar</button>
+                                    @endif
+
+                                    {{-- Tombol untuk Surat Jalan (SJ) yang memanggil modal baru --}}
+                                    @if (!empty($trip->delivery_letter_path))
+                                        <button wire:click="openDeliveryLetterModal({{ $trip->id }})"
+                                            class="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">SJ</button>
+                                    @endif
                                 </div>
                             </div>
                         @empty
@@ -300,5 +311,9 @@
 
     @if ($showImageModal)
         @include('livewire.tripTable.trip-image-modal')
+    @endif
+
+    @if ($showDeliveryLetterModal)
+        @include('livewire.tripTable.trip-delivery-letter-modal')
     @endif
 </div>

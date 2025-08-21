@@ -7,6 +7,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Support\Facades\Storage;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -24,13 +25,73 @@ class TripTable extends Component
     public $detailSortField = 'created_at';
     public $detailSortDirection = 'desc';
 
-    // Properti untuk modal
     public $showModal = false;
     public $tripId;
     public $projectName, $origin, $destination;
 
     public $showImageModal = false;
     public $imageUrl;
+
+    public $showDeliveryLetterModal = false;
+    public $initialLetters = [];
+    public $finalLetters = [];
+    public $currentInitialIndex = 0;
+    public $currentFinalIndex = 0;
+
+    /**
+     * Membuka modal perbandingan surat jalan.
+     */
+    public function openDeliveryLetterModal($tripId)
+    {
+        $trip = Trip::findOrFail($tripId);
+        $deliveryData = $trip->delivery_letter_path ?? [];
+
+        $this->initialLetters = $deliveryData['initial_letters'] ?? [];
+        $this->finalLetters = $deliveryData['final_letters'] ?? [];
+
+        $this->currentInitialIndex = 0;
+        $this->currentFinalIndex = 0;
+
+        $this->showDeliveryLetterModal = true;
+    }
+
+    /**
+     * Menutup modal perbandingan surat jalan.
+     */
+    public function closeDeliveryLetterModal()
+    {
+        $this->showDeliveryLetterModal = false;
+        $this->initialLetters = [];
+        $this->finalLetters = [];
+    }
+
+    public function nextInitialLetter()
+    {
+        if ($this->currentInitialIndex < count($this->initialLetters) - 1) {
+            $this->currentInitialIndex++;
+        }
+    }
+
+    public function previousInitialLetter()
+    {
+        if ($this->currentInitialIndex > 0) {
+            $this->currentInitialIndex--;
+        }
+    }
+
+    public function nextFinalLetter()
+    {
+        if ($this->currentFinalIndex < count($this->finalLetters) - 1) {
+            $this->currentFinalIndex++;
+        }
+    }
+
+    public function previousFinalLetter()
+    {
+        if ($this->currentFinalIndex > 0) {
+            $this->currentFinalIndex--;
+        }
+    }
 
     public function sortBy($field)
     {
