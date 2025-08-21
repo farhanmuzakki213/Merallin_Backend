@@ -30,6 +30,17 @@ class Trip extends Model
         'status_trip',
     ];
 
+    protected $guarded = [];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'delivery_letter_path' => 'array',
+    ];
+
     /**
      * The accessors to append to the model's array form.
      *
@@ -96,24 +107,39 @@ class Trip extends Model
     /**
      * Accessor untuk mendapatkan URL lengkap surat jalan.
      */
-    protected function fullDeliveryLetterUrl(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->delivery_letter_path ? Storage::url($this->delivery_letter_path) : null,
-        );
-    }
 
     protected function fullDeliveryLetterUrls(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                if (!$this->delivery_letter_path) {
-                    return [];
-                }
-                return array_map(function ($path) {
-                    return Storage::url($path);
-                }, $this->delivery_letter_path);
+{
+    return Attribute::make(
+        get: function () {
+            $deliveryPaths = $this->delivery_letter_path; // Ini adalah array dari $casts
+
+            if (empty($deliveryPaths)) {
+                return [];
             }
-        );
-    }
+
+            // 1. Gabungkan semua path menjadi satu array datar
+            $allPaths = [];
+            if (!empty($deliveryPaths['initial_letters'])) {
+                $allPaths = array_merge($allPaths, $deliveryPaths['initial_letters']);
+            }
+            if (!empty($deliveryPaths['final_letters'])) {
+                $allPaths = array_merge($allPaths, $deliveryPaths['final_letters']);
+            }
+
+            if (empty($allPaths)) {
+                return [];
+            }
+
+            // 2. Sekarang proses array yang sudah datar dengan array_map
+            return array_map(function ($path) {
+                // Pastikan $path adalah string sebelum diproses
+                if (is_string($path)) {
+                    return Storage::url($path);
+                }
+                return null;
+            }, $allPaths);
+        }
+    );
+}
 }

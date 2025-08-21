@@ -213,6 +213,7 @@ class TripController extends Controller
                 $finalLetterPaths[] = $file->store('trip_photos/delivery_letters', 'public');
             }
         }
+        $deliveryData = $trip->delivery_letter_path;
         $deliveryData['final_letters'] = $finalLetterPaths;
 
         $trip->update([
