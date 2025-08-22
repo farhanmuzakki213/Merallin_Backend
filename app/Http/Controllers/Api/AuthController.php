@@ -97,8 +97,6 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $user->assignRole('karyawan');
-
         event(new Registered($user));
 
         return response()->json([
