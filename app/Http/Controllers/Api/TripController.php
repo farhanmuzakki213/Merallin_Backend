@@ -7,9 +7,28 @@ use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class TripController extends Controller
 {
+    /**
+     * Membuat nama file yang unik berdasarkan nama user, tanggal, dan kode unik.
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @return string
+     */
+    private function generateUniqueFileName($file)
+    {
+        $userName = Str::slug(Auth::user()->name, '-');
+
+        $timestamp = now()->format('Ymd_His');
+
+        $uniqueId = uniqid();
+
+        $extension = $file->getClientOriginalExtension();
+
+        return "{$userName}_{$timestamp}_{$uniqueId}.{$extension}";
+    }
 
     // =================================================================
     // FUNGSI UNTUK DRIVER
@@ -102,7 +121,9 @@ class TripController extends Controller
             'start_km_photo'  => 'required|image|max:5120',
         ]);
 
-        $path = $request->file('start_km_photo')->store('trip_photos/start_km_photo', 'public');
+        $photoFile = $request->file('start_km_photo');
+        $fileName = $this->generateUniqueFileName($photoFile);
+        $path = $photoFile->storeAs('trip_photos/start_km_photo', $fileName, 'public');
 
         $trip->update([
             'license_plate'       => $validated['license_plate'],
@@ -149,11 +170,14 @@ class TripController extends Controller
             'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
         ]);
 
-        $muatPath = $request->file('muat_photo')->store('trip_photos/muat_photo', 'public');
+        $muatPhotoFile = $request->file('muat_photo');
+        $muatPhotoName = $this->generateUniqueFileName($muatPhotoFile);
+        $muatPath = $muatPhotoFile->storeAs('trip_photos/muat_photo', $muatPhotoName, 'public');
         $initialLetterPaths = [];
         if ($request->hasFile('delivery_letters')) {
             foreach ($request->file('delivery_letters') as $file) {
-                $initialLetterPaths[] = $file->store('trip_photos/delivery_letters', 'public');
+                $letterName = $this->generateUniqueFileName($file);
+                $initialLetterPaths[] = $file->storeAs('trip_photos/delivery_letters', $letterName, 'public');
             }
         }
         $deliveryData = ['initial_letters' => $initialLetterPaths];
@@ -205,12 +229,19 @@ class TripController extends Controller
             'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
         ]);
 
-        $bongkarPath = $request->file('bongkar_photo')->store('trip_photos/bongkar_photo', 'public');
-        $endKmPath = $request->file('end_km_photo')->store('trip_photos/end_km_photo', 'public');
+        $bongkarFile = $request->file('bongkar_photo');
+        $bongkarFileName = $this->generateUniqueFileName($bongkarFile);
+        $bongkarPath = $bongkarFile->storeAs('trip_photos/bongkar_photo', $bongkarFileName, 'public');
+
+        $endKmFile = $request->file('end_km_photo');
+        $endKmFileName = $this->generateUniqueFileName($endKmFile);
+        $endKmPath = $endKmFile->storeAs('trip_photos/end_km_photo', $endKmFileName, 'public');
+
         $finalLetterPaths = [];
         if ($request->hasFile('delivery_letters')) {
             foreach ($request->file('delivery_letters') as $file) {
-                $finalLetterPaths[] = $file->store('trip_photos/delivery_letters', 'public');
+                $letterName = $this->generateUniqueFileName($file);
+                $finalLetterPaths[] = $file->storeAs('trip_photos/delivery_letters', $letterName, 'public');
             }
         }
         $deliveryData = $trip->delivery_letter_path;
