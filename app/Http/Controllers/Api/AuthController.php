@@ -26,19 +26,29 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
-        $user->tokens()->delete();
-        $token = $user->createToken('api-token')->plainTextToken;
-        $roles = $user->getRoleNames();
 
-        return response()->json([
-            'message' => 'Login berhasil',
-            'user' => $user,
-            'role' => $roles,
-            'meta' => [
-                'token' => $token,
-                'token_type' => 'Bearer',
-            ],
-        ]);
+        if ($user->hasAnyRole(['karyawan', 'driver'])) {
+            $user->tokens()->delete();
+            $token = $user->createToken('api-token')->plainTextToken;
+            $roles = $user->getRoleNames();
+
+            return response()->json([
+                'message' => 'Login berhasil',
+                'user' => $user,
+                'role' => $roles,
+                'meta' => [
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                ],
+            ]);
+        } else {
+            Auth::logout();
+            $user->tokens()->delete();
+
+            return response()->json([
+                'message' => 'Anda tidak memiliki hak akses untuk login.'
+            ], 403);
+        }
     }
 
     public function logout(Request $request)
