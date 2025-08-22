@@ -96,20 +96,20 @@
                         <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
                             <div
                                 class="col-span-3 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm break-words font-medium text-gray-800 dark:text-white/90">
+                                <p class="text-theme-sm whitespace-normal break-words font-medium text-gray-800 dark:text-white/90">
                                     {{ $trip->project_name }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">{{ $trip->origin }}</p>
+                                <p class="text-theme-sm whitespace-normal break-words text-gray-700 dark:text-gray-400">{{ $trip->origin }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">{{ $trip->destination }}</p>
+                                <p class="text-theme-sm whitespace-normal break-words text-gray-700 dark:text-gray-400">{{ $trip->destination }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">
+                                <p class="text-theme-sm whitespace-normal break-words text-gray-700 dark:text-gray-400">
                                     {{ $trip->user->name ?? 'Not Assigned' }}</p>
                             </div>
                             <div
@@ -222,14 +222,14 @@
                                 {{-- Kolom Driver & Plat Nomor Gabungan --}}
                                 <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
                                     <div>
-                                        <p class="text-theme-sm block font-medium text-gray-800 dark:text-white/90">
+                                        <p class="text-theme-sm whitespace-normal break-words font-medium text-gray-800 dark:text-white/90">
                                             {{ $trip->user->name ?? 'N/A' }}</p>
                                         <span
                                             class="text-sm text-gray-500 dark:text-gray-400">{{ $trip->license_plate ?? 'N/A' }}</span>
                                     </div>
                                 </div>
                                 <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">
-                                    <p class="text-theme-sm break-words font-medium text-gray-800 dark:text-white/90">
+                                    <p class="text-theme-sm whitespace-normal break-words font-medium text-gray-800 dark:text-white/90">
                                     {{ $trip->project_name }}</p>
                                 </div>
                                 {{-- KM Awal dengan Link Pop-up --}}
