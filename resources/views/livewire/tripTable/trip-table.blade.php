@@ -96,20 +96,20 @@
                         <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
                             <div
                                 class="col-span-3 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm font-medium text-gray-800 dark:text-white/90">
+                                <p class="text-theme-sm break-words font-medium text-gray-800 dark:text-white/90">
                                     {{ $trip->project_name }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm text-gray-700 dark:text-gray-400">{{ $trip->origin }}</p>
+                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">{{ $trip->origin }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm text-gray-700 dark:text-gray-400">{{ $trip->destination }}</p>
+                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">{{ $trip->destination }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
-                                <p class="text-theme-sm text-gray-700 dark:text-gray-400">
+                                <p class="text-theme-sm break-words text-gray-700 dark:text-gray-400">
                                     {{ $trip->user->name ?? 'Not Assigned' }}</p>
                             </div>
                             <div
@@ -229,7 +229,9 @@
                                     </div>
                                 </div>
                                 <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">
-                                    {{ $trip->project_name }}</div>
+                                    <p class="text-theme-sm break-words font-medium text-gray-800 dark:text-white/90">
+                                    {{ $trip->project_name }}</p>
+                                </div>
                                 {{-- KM Awal dengan Link Pop-up --}}
                                 <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
                                     @if ($trip->start_km_photo_path)
