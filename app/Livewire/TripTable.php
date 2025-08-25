@@ -3,11 +3,13 @@
 namespace App\Livewire;
 
 use App\Models\Trip;
+use App\Models\User;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -37,6 +39,152 @@ class TripTable extends Component
     public $finalLetters = [];
     public $currentInitialIndex = 0;
     public $currentFinalIndex = 0;
+
+    public $userId;
+    public $jenisTrip = 'muatan perusahan';
+    public $drivers = [];
+
+    public $showRejectionModal = false;
+    public $rejectionTripId;
+    public $rejectionPhotoType;
+    public $rejectionReason = '';
+
+    public $showBongkarPhotoModal = false;
+    public $bongkarPhotos = [];
+    public $currentBongkarPhotoIndex = 0;
+
+    /**
+     * Membuka modal galeri untuk foto bongkar.
+     */
+    public function openBongkarPhotoModal($tripId)
+    {
+        $trip = Trip::findOrFail($tripId);
+        $this->bongkarPhotos = $trip->bongkar_photo_path ?? [];
+        $this->currentBongkarPhotoIndex = 0;
+        $this->showBongkarPhotoModal = true;
+    }
+
+    /**
+     * Menutup modal galeri untuk foto bongkar.
+     */
+    public function closeBongkarPhotoModal()
+    {
+        $this->showBongkarPhotoModal = false;
+        $this->bongkarPhotos = [];
+    }
+
+    /**
+     * Menampilkan foto berikutnya di galeri.
+     */
+    public function nextBongkarPhoto()
+    {
+        if ($this->currentBongkarPhotoIndex < count($this->bongkarPhotos) - 1) {
+            $this->currentBongkarPhotoIndex++;
+        }
+    }
+
+    /**
+     * Menampilkan foto sebelumnya di galeri.
+     */
+    public function previousBongkarPhoto()
+    {
+        if ($this->currentBongkarPhotoIndex > 0) {
+            $this->currentBongkarPhotoIndex--;
+        }
+    }
+
+    /**
+     * Load data driver saat komponen di-mount.
+     */
+    public function mount()
+    {
+        // Asumsi driver memiliki role 'driver'. Sesuaikan jika perlu.
+        $this->drivers = User::whereHas('roles', function ($query) {
+            $query->where('name', 'driver');
+        })->get();
+    }
+
+    public function approvePhoto($tripId, $photoType)
+    {
+        $trip = Trip::findOrFail($tripId);
+        $trip->update([
+            "{$photoType}_status" => 'approved',
+            "{$photoType}_verified_by" => Auth::id(),
+            "{$photoType}_verified_at" => now(),
+            "{$photoType}_rejection_reason" => null,
+        ]);
+        $trip->refresh();
+
+        $allDocumentsApproved = $trip->start_km_photo_path && $trip->start_km_photo_status === 'approved' &&
+            $trip->muat_photo_path && $trip->muat_photo_status === 'approved' &&
+            $trip->bongkar_photo_path && $trip->bongkar_photo_status === 'approved' &&
+            $trip->end_km_photo_path && $trip->end_km_photo_status === 'approved' &&
+            $trip->delivery_letter_path && $trip->delivery_letter_status === 'approved' &&
+            $trip->delivery_order_path && $trip->delivery_order_status === 'approved' &&
+            $trip->timbangan_kendaraan_photo_path && $trip->timbangan_kendaraan_photo_status === 'approved' &&
+            $trip->segel_photo_path && $trip->segel_photo_status === 'approved';
+
+        if ($allDocumentsApproved) {
+            $trip->update(['status_trip' => 'selesai']);
+            session()->flash('message', 'Photo approved. All documents complete, Trip is now finished!');
+        } else {
+            session()->flash('message', 'Photo has been approved.');
+        }
+    }
+
+    public function openRejectionModal($tripId, $photoType)
+    {
+        $this->rejectionTripId = $tripId;
+        $this->rejectionPhotoType = $photoType;
+        $this->rejectionReason = '';
+        $this->showRejectionModal = true;
+    }
+
+    public function closeRejectionModal()
+    {
+        $this->showRejectionModal = false;
+        $this->reset(['rejectionTripId', 'rejectionPhotoType', 'rejectionReason']);
+    }
+
+    public function rejectPhoto()
+    {
+        $this->validate(['rejectionReason' => 'required|string|min:10']);
+
+        $trip = Trip::findOrFail($this->rejectionTripId);
+        $trip->update([
+            "{$this->rejectionPhotoType}_status" => 'rejected',
+            "{$this->rejectionPhotoType}_verified_by" => Auth::id(),
+            "{$this->rejectionPhotoType}_verified_at" => now(),
+            "{$this->rejectionPhotoType}_rejection_reason" => $this->rejectionReason,
+        ]);
+
+        session()->flash('message', 'Photo has been rejected with a reason.');
+        $this->closeRejectionModal();
+    }
+
+
+    public function openModal()
+    {
+        $this->resetInputFields();
+        $this->showModal = true;
+    }
+
+    public function closeModal()
+    {
+        $this->showModal = false;
+        $this->resetInputFields();
+    }
+
+    private function resetInputFields()
+    {
+        $this->tripId = null;
+        $this->projectName = '';
+        $this->origin = '';
+        $this->destination = '';
+        $this->userId = null; // Reset driver
+        $this->jenisTrip = 'muatan perusahan'; // Reset jenis trip
+        $this->resetErrorBag();
+    }
 
     /**
      * Membuka modal perbandingan surat jalan.
@@ -113,40 +261,31 @@ class TripTable extends Component
         $this->detailSortField = $field;
     }
 
-    public function openModal()
-    {
-        $this->resetInputFields();
-        $this->showModal = true;
-    }
-
-    public function closeModal()
-    {
-        $this->showModal = false;
-        $this->resetInputFields();
-    }
-
-    private function resetInputFields()
-    {
-        $this->tripId = null;
-        $this->projectName = '';
-        $this->origin = '';
-        $this->destination = '';
-        $this->resetErrorBag();
-    }
-
     public function save()
     {
         $this->validate([
             'projectName' => 'required|string|max:255',
             'origin' => 'required|string|max:255',
             'destination' => 'required|string|max:255',
+            'userId' => [
+                'required',
+                'exists:users,id',
+                Rule::unique('trips', 'user_id')->where(function ($query) {
+                    return $query->where('status_trip', 'proses');
+                })->ignore($this->tripId),
+            ],
+            'jenisTrip' => 'required|in:muatan driver,muatan perusahan',
+        ], [
+            'userId.unique' => 'The selected driver already has an active trip in process.',
         ]);
 
         Trip::updateOrCreate(['id' => $this->tripId], [
             'project_name' => $this->projectName,
             'origin' => $this->origin,
             'destination' => $this->destination,
-            'status_trip' => 'tersedia',
+            'user_id' => $this->userId,
+            'jenis_trip' => $this->jenisTrip,
+            'status_trip' => $this->tripId ? Trip::find($this->tripId)->status_trip : 'tersedia',
         ]);
 
         session()->flash('message', $this->tripId ? 'Trip Updated Successfully.' : 'Trip Created Successfully.');
@@ -167,6 +306,8 @@ class TripTable extends Component
         $this->projectName = $trip->project_name;
         $this->origin = $trip->origin;
         $this->destination = $trip->destination;
+        $this->userId = $trip->user_id; // Load driver
+        $this->jenisTrip = $trip->jenis_trip; // Load jenis trip
         $this->openModal();
     }
 

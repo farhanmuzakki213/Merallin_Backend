@@ -201,109 +201,138 @@
                 <div class="max-w-full overflow-x-auto">
                     <div class="min-w-[1100px] text-sm">
                         {{-- Header Tabel Detail (DIPERBARUI) --}}
-                        <div
-                            class="grid grid-cols-12 border-t border-gray-200 font-medium text-gray-700 dark:border-gray-800 dark:text-gray-400">
-                            <div class="col-span-2 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('user.name')">Driver / Plat Nomor</div>
-                            <div class="col-span-3 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('project_name')">Project</div>
-                            <div class="col-span-1 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('start_km')">KM Awal </div>
-                            <div class="col-span-1 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('end_km')">KM Akhir</div>
-                            <div class="col-span-2 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('status_lokasi')">Status</div>
-                            <div class="col-span-1 flex items-center cursor-pointer border-r p-3 dark:border-gray-800"
-                                wire:click="sortByDetail('created_at')">Tanggal</div>
-                            <div class="col-span-1 flex items-center p-3">Dokumen Foto</div>
+                        <div class="grid grid-cols-12 border-t border-gray-200 font-medium text-gray-700 dark:border-gray-800 dark:text-gray-400">
+                            <div class="col-span-2 flex cursor-pointer items-center border-r p-3 dark:border-gray-800" wire:click="sortByDetail('user.name')">Driver / Plat Nomor</div>
+                            <div class="col-span-2 flex cursor-pointer items-center border-r p-3 dark:border-gray-800" wire:click="sortByDetail('project_name')">Project</div>
+                            <div class="col-span-2 flex cursor-pointer items-center border-r p-3 dark:border-gray-800" wire:click="sortByDetail('start_km')">KM (Awal / Akhir)</div>
+                            <div class="col-span-2 flex cursor-pointer items-center border-r p-3 dark:border-gray-800" wire:click="sortByDetail('status_lokasi')">Status Perjalanan</div>
+                            <div class="col-span-1 flex cursor-pointer items-center border-r p-3 dark:border-gray-800" wire:click="sortByDetail('created_at')">Tanggal</div>
+                            <div class="col-span-3 flex items-center p-3">Dokumen Foto & Verifikasi</div>
                         </div>
 
                         {{-- Body Tabel Detail (DIPERBARUI) --}}
                         @forelse ($detailTrips as $trip)
                             <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
-                                {{-- Kolom Driver & Plat Nomor Gabungan --}}
+                                {{-- Driver & License Plate --}}
                                 <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
                                     <div>
-                                        <p class="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                                            {{ $trip->user->name ?? 'N/A' }}</p>
-                                        <span
-                                            class="text-sm text-gray-500 dark:text-gray-400">{{ $trip->license_plate ?? 'N/A' }}</span>
+                                        <p class="font-medium text-gray-800 dark:text-white/90">{{ $trip->user->name ?? 'N/A' }}</p>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $trip->license_plate ?? 'N/A' }}</span>
                                     </div>
                                 </div>
-                                {{-- [PERBAIKAN] Project (Detail) --}}
-                                <div class="col-span-3 flex items-center whitespace-normal break-words border-r p-3 dark:border-gray-800">
-                                    <p class="text-theme-sm font-medium text-gray-800 dark:text-white/90">
-                                        {{ $trip->project_name }}
+                                {{-- Project --}}
+                                <div class="col-span-2 flex items-center whitespace-normal break-words border-r p-3 dark:border-gray-800">
+                                    <p class="text-gray-800 dark:text-white/90">{{ $trip->project_name }}</p>
+                                </div>
+                                {{-- Combined KM --}}
+                                <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
+                                    <p class="text-gray-700 dark:text-gray-400">
+                                        {{-- Menambahkan format angka dan satuan "KM" --}}
+                                        {{ $trip->start_km ? number_format($trip->start_km, 0, ',', '.') . ' KM' : 'N/A' }}
+                                        <span class="text-gray-400">/</span>
+                                        {{ $trip->end_km ? number_format($trip->end_km, 0, ',', '.') . ' KM' : 'N/A' }}
                                     </p>
                                 </div>
-                                {{-- KM Awal dengan Link Pop-up --}}
-                                <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
-                                    @if ($trip->start_km_photo_path)
-                                        <button
-                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->start_km_photo_path) }}')"
-                                            class="font-medium text-brand-500 hover:underline">
-                                            {{ $trip->start_km ? number_format($trip->start_km) . ' km' : 'Lihat Foto' }}
-                                        </button>
-                                    @else
-                                        <span>{{ $trip->start_km ? number_format($trip->start_km) . ' km' : 'N/A' }}</span>
-                                    @endif
-                                </div>
-                                {{-- KM Akhir dengan Link Pop-up --}}
-                                <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
-                                    @if ($trip->end_km_photo_path)
-                                        <button
-                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->end_km_photo_path) }}')"
-                                            class="font-medium text-brand-500 hover:underline">
-                                            {{ $trip->end_km ? number_format($trip->end_km) . ' km' : 'Lihat Foto' }}
-                                        </button>
-                                    @else
-                                        <span>{{ $trip->end_km ? number_format($trip->end_km) . ' km' : 'N/A' }}</span>
-                                    @endif
-                                </div>
-                                {{-- Status Detail Gabungan --}}
+                                {{-- Trip Status --}}
                                 <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
-                                    @if (($trip->status_lokasi && $trip->status_muatan) == null)
-                                        {{ ucfirst($trip->status_trip) }}
+                                    @if (!$trip->status_lokasi && !$trip->status_muatan)
+                                        <span class="font-medium">{{ ucfirst($trip->status_trip) }}</span>
                                     @else
                                         <div>
-                                            <p
-                                                class="text-theme-sm block font-medium text-gray-800 dark:text-white/90">
-                                                {{ ucfirst($trip->status_lokasi) ?? 'Belum ada info lokasi' }}</p>
-                                            <span
-                                                class="text-sm text-gray-500 dark:text-gray-400">{{ ucfirst($trip->status_muatan) ?? 'Belum ada info muatan' }}</span>
+                                            <p class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($trip->status_lokasi) ?? '...' }}</p>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ ucfirst($trip->status_muatan) ?? '...' }}</span>
                                         </div>
                                     @endif
                                 </div>
-                                <div class="col-span-1 flex items-center border-r p-3 dark:border-gray-800">
+                                {{-- Date --}}
+                                <div class="col-span-1 flex items-center border-r p-3 text-xs dark:border-gray-800">
                                     {{ ($trip->created_at ?? $trip->updated_at)?->format('d/m/y H:i') ?? 'N/A' }}
                                 </div>
-                                {{-- Tombol Dokumen Foto Lainnya --}}
-                                <div class="col-span-1 flex items-center flex-wrap items-center gap-2 p-3">
-                                    {{-- Tombol untuk foto Muat --}}
+                                {{-- Combined Documents & Verification --}}
+                                <div class="col-span-3 flex flex-col justify-center gap-2 p-3">
+                                    {{-- KM Awal --}}
+                                    @if ($trip->start_km_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->start_km_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">KM Awal</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->start_km_photo_status, 'tripId' => $trip->id, 'photoType' => 'start_km_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Muat --}}
                                     @if ($trip->muat_photo_path)
-                                        <button
-                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->muat_photo_path) }}')"
-                                            class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Muat</button>
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->muat_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Muat</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->muat_photo_status, 'tripId' => $trip->id, 'photoType' => 'muat_photo'])
+                                        </div>
                                     @endif
-
-                                    {{-- Tombol untuk foto Bongkar --}}
-                                    @if ($trip->bongkar_photo_path)
-                                        <button
-                                            wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($trip->bongkar_photo_path) }}')"
-                                            class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Bongkar</button>
+                                    @if ($trip->delivery_order_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->delivery_order_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Delivery Order (DO)</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->delivery_order_status, 'tripId' => $trip->id, 'photoType' => 'delivery_order'])
+                                        </div>
                                     @endif
-
-                                    {{-- Tombol untuk Surat Jalan (SJ) yang memanggil modal baru --}}
+                                    @if ($trip->timbangan_kendaraan_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->timbangan_kendaraan_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Foto Timbangan</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->timbangan_kendaraan_photo_status, 'tripId' => $trip->id, 'photoType' => 'timbangan_kendaraan_photo'])
+                                        </div>
+                                    @endif
+                                    @if ($trip->segel_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->segel_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Foto Segel</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->segel_photo_status, 'tripId' => $trip->id, 'photoType' => 'segel_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Bongkar --}}
+                                    @if (!empty($trip->bongkar_photo_path))
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            {{-- Diubah untuk memanggil modal galeri --}}
+                                            <button wire:click="openBongkarPhotoModal({{ $trip->id }})" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                                                Bongkar ({{ count($trip->bongkar_photo_path) }} Foto)
+                                            </button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->bongkar_photo_status, 'tripId' => $trip->id, 'photoType' => 'bongkar_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- KM Akhir --}}
+                                    @if ($trip->end_km_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ Storage::url($trip->end_km_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">KM Akhir</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->end_km_photo_status, 'tripId' => $trip->id, 'photoType' => 'end_km_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Surat Jalan (SJ) --}}
                                     @if (!empty($trip->delivery_letter_path))
-                                        <button wire:click="openDeliveryLetterModal({{ $trip->id }})"
-                                            class="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">SJ</button>
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openDeliveryLetterModal({{ $trip->id }})" class="flex-1 rounded bg-blue-100 px-2 py-1 text-left text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">Surat Jalan (SJ)</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->delivery_letter_status, 'tripId' => $trip->id, 'photoType' => 'delivery_letter'])
+                                        </div>
                                     @endif
                                 </div>
                             </div>
                         @empty
-                            <div class="col-span-12 p-4 text-center text-gray-500">No details found.</div>
+                            <div class="grid grid-cols-1 border-t border-gray-100 dark:border-gray-800">
+                                <div class="col-span-1 p-4 text-center text-gray-500 dark:text-gray-400">
+                                    No trip details found.
+                                </div>
+                            </div>
                         @endforelse
                     </div>
+                    @if ($showRejectionModal)
+                        <div class="fixed inset-0 z-[999999] flex items-center justify-center bg-black bg-opacity-50">
+                            <div class="w-full max-w-md rounded-lg bg-white p-6 dark:bg-boxdark">
+                                <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Reason for Rejection</h3>
+                                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Please provide a clear reason why this photo is being rejected.</p>
+                                <div class="mt-4">
+                                    <textarea wire:model="rejectionReason" rows="4"
+                                        class="w-full rounded-lg border border-gray-300 p-2 focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-boxdark-2"></textarea>
+                                    @error('rejectionReason') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="mt-4 flex justify-end gap-3">
+                                    <button wire:click="closeRejectionModal" type="button" class="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+                                    <button wire:click="rejectPhoto" type="button" class="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600">Submit Rejection</button>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="border-t border-gray-100 py-4 px-4 dark:border-gray-800">{{ $detailTrips->links() }}</div>
@@ -321,5 +350,9 @@
 
     @if ($showDeliveryLetterModal)
         @include('livewire.tripTable.trip-delivery-letter-modal')
+    @endif
+
+    @if ($showBongkarPhotoModal)
+        @include('livewire.tripTable.trip-bongkar-photo-modal')
     @endif
 </div>

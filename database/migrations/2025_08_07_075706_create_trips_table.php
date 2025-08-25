@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null'); // Driver, onDelete('set null') lebih aman
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('project_name');
             $table->string('origin');
             $table->string('destination');
@@ -22,20 +22,61 @@ return new class extends Migration
             $table->string('license_plate')->nullable();
             $table->integer('start_km')->nullable();
             $table->string('start_km_photo_path')->nullable();
+            $table->enum('start_km_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('start_km_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('start_km_photo_verified_at')->nullable();
+            $table->text('start_km_photo_rejection_reason')->nullable();
+
+            // Data Setelah Muat
+            $table->string('delivery_order_path')->nullable();
+            $table->enum('delivery_order_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('delivery_order_verified_by')->nullable()->constrained('users');
+            $table->timestamp('delivery_order_verified_at')->nullable();
+            $table->text('delivery_order_rejection_reason')->nullable();
+
+            $table->string('timbangan_kendaraan_photo_path')->nullable();
+            $table->enum('timbangan_kendaraan_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('timbangan_kendaraan_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('timbangan_kendaraan_photo_verified_at')->nullable();
+            $table->text('timbangan_kendaraan_photo_rejection_reason')->nullable();
+
+            $table->string('segel_photo_path')->nullable();
+            $table->enum('segel_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('segel_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('segel_photo_verified_at')->nullable();
+            $table->text('segel_photo_rejection_reason')->nullable();
 
             // Data Proses Muat
             $table->string('muat_photo_path')->nullable();
+            $table->enum('muat_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('muat_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('muat_photo_verified_at')->nullable();
+            $table->text('muat_photo_rejection_reason')->nullable();
 
             // Data Proses Bongkar & Selesai
-            $table->string('bongkar_photo_path')->nullable();
+            $table->text('bongkar_photo_path')->nullable();
+            $table->enum('bongkar_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('bongkar_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('bongkar_photo_verified_at')->nullable();
+            $table->text('bongkar_photo_rejection_reason')->nullable();
+
             $table->integer('end_km')->nullable();
             $table->string('end_km_photo_path')->nullable();
+            $table->enum('end_km_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('end_km_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('end_km_photo_verified_at')->nullable();
+            $table->text('end_km_photo_rejection_reason')->nullable();
 
             // Surat jalan bisa diupload 2x, kita satukan saja
             $table->text('delivery_letter_path')->nullable();
+            $table->enum('delivery_letter_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('delivery_letter_verified_by')->nullable()->constrained('users');
+            $table->timestamp('delivery_letter_verified_at')->nullable();
+            $table->text('delivery_letter_rejection_reason')->nullable();
 
             // Status Utama
             $table->enum('status_trip', ['tersedia', 'proses', 'selesai'])->default('tersedia');
+            $table->enum('jenis_trip', ['muatan driver', 'muatan perusahan'])->default('muatan perusahan');
 
             // Status Detail (mengikuti alur)
             $table->enum('status_lokasi', [

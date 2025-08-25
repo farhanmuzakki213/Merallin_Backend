@@ -30,68 +30,6 @@ class TripController extends Controller
         return "{$userName}_{$timestamp}_{$uniqueId}.{$extension}";
     }
 
-    // =================================================================
-    // FUNGSI UNTUK DRIVER
-    // =================================================================
-
-    /**
-     * Driver membuat trip sendiri.
-     */
-    public function storeByDriver(Request $request)
-    {
-        $validated = $request->validate([
-            'project_name' => 'required|string|max:255',
-            'origin'       => 'required|string|max:255',
-            'destination'  => 'required|string|max:255',
-        ]);
-
-        $trip = Trip::create([
-            'user_id'      => Auth::id(),
-            'project_name' => $validated['project_name'],
-            'origin'       => $validated['origin'],
-            'destination'  => $validated['destination'],
-            'status_trip'  => 'proses',
-        ]);
-
-        return response()->json(['message' => 'Trip berhasil dibuat.', 'data' => $trip], 201);
-    }
-
-    public function updateByDriver(Request $request, Trip $trip)
-    {
-        if ($trip->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Anda tidak memiliki akses untuk mengedit trip ini.'], 403);
-        }
-        if ($trip->status_trip !== 'proses' || $trip->start_km !== null) {
-            return response()->json(['message' => 'Trip tidak dapat diedit karena perjalanan sudah dimulai.'], 422);
-        }
-
-        $validated = $request->validate([
-            'project_name' => 'required|string|max:255',
-            'origin'       => 'required|string|max:255',
-            'destination'  => 'required|string|max:255',
-        ]);
-
-        $trip->update($validated);
-
-        return response()->json(['message' => 'Trip berhasil diperbarui.', 'data' => $trip]);
-    }
-
-    /**
-     * [BARU] Driver menghapus trip yang ia buat.
-     */
-    public function destroyByDriver(Trip $trip)
-    {
-        if ($trip->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Anda tidak memiliki akses untuk menghapus trip ini.'], 403);
-        }
-        if ($trip->status_trip !== 'proses' || $trip->start_km !== null) {
-            return response()->json(['message' => 'Trip tidak dapat dihapus karena perjalanan sudah dimulai.'], 422);
-        }
-        $trip->delete();
-
-        return response()->json(['message' => 'Trip berhasil dihapus.']);
-    }
-
     /**
      * Driver mengambil/menerima trip yang dibuat oleh Admin.
      */
@@ -193,6 +131,36 @@ class TripController extends Controller
     }
 
     /**
+     * Driver mengupload dokumen tambahan (DO, Timbangan, Segel).
+     */
+    public function uploadTripDocuments(Request $request, Trip $trip)
+    {
+        $validated = $request->validate([
+            'delivery_order'            => 'required|image|max:5120',
+            'timbangan_kendaraan_photo' => 'required|image|max:5120',
+            'segel_photo'               => 'required|image|max:5120',
+        ]);
+
+        $updateData = [];
+
+        $doFile = $request->file('delivery_order');
+        $doFileName = $this->generateUniqueFileName($doFile);
+        $updateData['delivery_order_path'] = $doFile->storeAs('trip_photos/delivery_order', $doFileName, 'public');
+
+        $timbanganFile = $request->file('timbangan_kendaraan_photo');
+        $timbanganFileName = $this->generateUniqueFileName($timbanganFile);
+        $updateData['timbangan_kendaraan_photo_path'] = $timbanganFile->storeAs('trip_photos/timbangan_kendaraan', $timbanganFileName, 'public');
+
+        $segelFile = $request->file('segel_photo');
+        $segelFileName = $this->generateUniqueFileName($segelFile);
+        $updateData['segel_photo_path'] = $segelFile->storeAs('trip_photos/segel_photo', $segelFileName, 'public');
+
+        $trip->update($updateData);
+
+        return response()->json(['message' => 'Dokumen tambahan berhasil diupload.', 'data' => $trip]);
+    }
+
+    /**
      * Driver update status saat tiba di lokasi bongkar.
      */
     public function updateAtUnloadingPoint(Trip $trip)
@@ -222,16 +190,21 @@ class TripController extends Controller
     {
         $startKmValue = $trip->start_km;
         $validated = $request->validate([
-            'bongkar_photo'     => 'required|image|max:5120',
+            'bongkar_photo'    => 'required|array',
+            'bongkar_photo.*'  => 'required|file|mimes:jpg,png|max:5120',
             'end_km_photo'      => 'required|image|max:5120',
             'end_km'            => 'required|integer|gte:' . $startKmValue,
             'delivery_letters'    => 'required|array',
             'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
         ]);
 
-        $bongkarFile = $request->file('bongkar_photo');
-        $bongkarFileName = $this->generateUniqueFileName($bongkarFile);
-        $bongkarPath = $bongkarFile->storeAs('trip_photos/bongkar_photo', $bongkarFileName, 'public');
+        $bongkarPaths = [];
+        if ($request->hasFile('bongkar_photo')) {
+            foreach ($request->file('bongkar_photo') as $file) {
+                $bongkarFileName = $this->generateUniqueFileName($file);
+                $bongkarPaths[] = $file->storeAs('trip_photos/bongkar_photo', $bongkarFileName, 'public');
+            }
+        }
 
         $endKmFile = $request->file('end_km_photo');
         $endKmFileName = $this->generateUniqueFileName($endKmFile);
@@ -248,11 +221,10 @@ class TripController extends Controller
         $deliveryData['final_letters'] = $finalLetterPaths;
 
         $trip->update([
-            'bongkar_photo_path' => $bongkarPath,
+            'bongkar_photo_path' => $bongkarPaths,
             'end_km_photo_path'  => $endKmPath,
             'end_km'             => $validated['end_km'],
             'delivery_letter_path' => $deliveryData,
-            'status_trip'        => 'selesai',
             'status_lokasi'      => null,
             'status_muatan'      => null,
         ]);

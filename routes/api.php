@@ -32,13 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- RUTE UNTUK DRIVER ---
     Route::prefix('driver')->group(function () {
-        // Melihat daftar trip (tersedia & milik sendiri)
-        Route::get('/trips', [TripController::class, 'indexDriver']);
-
-        // Membuat trip sendiri
-        Route::post('/trips', [TripController::class, 'storeByDriver']);
-        Route::put('/trips/{trip}/update', [TripController::class, 'updateByDriver']);
-        Route::delete('/trips/{trip}/delete', [TripController::class, 'destroyByDriver']);
 
         // Mengambil trip dari admin
         Route::post('/trips/{trip}/accept', [TripController::class, 'acceptTrip']);
@@ -48,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/at-loading', [TripController::class, 'updateAtLoadingPoint']);
         Route::post('/trips/{trip}/finish-loading', [TripController::class, 'finishLoading']);
         Route::post('/trips/{trip}/after-loading', [TripController::class, 'updateAfterLoading']);
+        Route::post('/trips/{trip}/upload-documents', [TripController::class, 'uploadTripDocuments']);
         Route::post('/trips/{trip}/at-unloading', [TripController::class, 'updateAtUnloadingPoint']);
         Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
         Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
