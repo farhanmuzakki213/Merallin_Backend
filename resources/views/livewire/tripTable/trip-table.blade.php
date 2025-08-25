@@ -185,17 +185,30 @@
             <div
                 class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
                 <div class="mb-4 flex flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-center gap-3"><span
-                            class="text-gray-500 dark:text-gray-400">Show</span><select
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="text-gray-500 dark:text-gray-400">Show</span>
+                            <select
                             wire:model.live="detailPerPage"
                             class="h-9 w-auto appearance-none rounded-lg border border-gray-300 bg-transparent py-2 pr-8 pl-3 text-sm focus:outline-hidden dark:border-gray-700 dark:bg-gray-900">
                             <option value="5">5</option>
                             <option value="10">10</option>
                             <option value-="25">25</option>
-                        </select><span class="text-gray-500 dark:text-gray-400">entries</span></div>
-                    <input type="text" placeholder="Search in details..."
+                        </select>
+                        <span class="text-gray-500 dark:text-gray-400">entries</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="text" placeholder="Search in details..."
                         wire:model.live.debounce.300ms="detailSearch"
                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm placeholder:text-gray-400 focus:outline-hidden xl:w-[300px] dark:border-gray-700 dark:bg-gray-900">
+                            <button wire:click="exportReport"
+                                    class="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-center font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Export Excel
+                            </button>
+                        </div>
                 </div>
 
                 <div class="max-w-full overflow-x-auto">

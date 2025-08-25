@@ -10,6 +10,9 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\TripUserReportExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -52,6 +55,51 @@ class TripTable extends Component
     public $showBongkarPhotoModal = false;
     public $bongkarPhotos = [];
     public $currentBongkarPhotoIndex = 0;
+
+    /**
+     * Fungsi untuk mengambil data dan men-trigger download Excel.
+     * Laporan dibuat berdasarkan BULAN DAN TAHUN SAAT INI secara otomatis.
+     */
+    public function exportReport()
+    {
+        $now = Carbon::now();
+        $currentMonth = $now->month;
+        $currentYear = $now->year;
+        $allTripCounts = Trip::with('user')
+            ->where('status_trip', 'selesai')
+            ->whereMonth('updated_at', $currentMonth)
+            ->whereYear('updated_at', $currentYear)
+            ->groupBy('user_id')
+            ->selectRaw("
+                user_id,
+                SUM(CASE WHEN jenis_trip = 'muatan perusahaan' THEN 1 ELSE 0 END) as trip_perusahaan,
+                SUM(CASE WHEN jenis_trip = 'muatan driver' THEN 1 ELSE 0 END) as trip_driver
+            ")
+            ->get();
+
+        $dataForExport = [];
+
+        foreach ($allTripCounts as $tripCount) {
+            $totalTrip = ($tripCount->trip_perusahaan ?? 0) + ($tripCount->trip_driver ?? 0);
+
+            $dataForExport[] = [
+                'driver' => $tripCount->user->name ?? 'User Tidak Ditemukan',
+                'bulan' => $now->format('F') . ' ' . $currentYear,
+                'trip_perusahaan' => $tripCount->trip_perusahaan ?? 0,
+                'trip_driver' => $tripCount->trip_driver ?? 0,
+                'total' => $totalTrip,
+            ];
+        }
+
+        if (empty($dataForExport)) {
+            session()->flash('error', 'Tidak ada data trip "selesai" yang ditemukan untuk bulan ini.');
+            return;
+        }
+
+        $fileName = 'laporan-trip-semua-driver-' . strtolower($now->format('F')) . '-' . $currentYear . '.xlsx';
+
+        return Excel::download(new TripUserReportExport($dataForExport), $fileName);
+    }
 
     /**
      * Membuka modal galeri untuk foto bongkar.

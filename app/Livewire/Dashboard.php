@@ -39,7 +39,7 @@ class Dashboard extends Component
         $tripStatusData = $this->getFilteredTripData();
         $tripStatusChart = [
             'data' => $tripStatusData->values()->toArray(),
-            'labels' => $tripStatusData->keys()->map(fn ($status) => ucfirst($status))->toArray(),
+            'labels' => $tripStatusData->keys()->map(fn($status) => ucfirst($status))->toArray(),
         ];
 
         // Kirim event kembali ke browser dengan data yang sudah difilter
@@ -63,7 +63,7 @@ class Dashboard extends Component
                 // Jika rentang tanggal
                 $endDate = Carbon::createFromFormat('M j, Y', trim($dateParts[1]));
                 $tripQuery->whereDate('created_at', '>=', $startDate)
-                          ->whereDate('created_at', '<=', $endDate);
+                    ->whereDate('created_at', '<=', $endDate);
             } else {
                 // Jika hanya satu tanggal
                 $tripQuery->whereDate('created_at', $startDate);
@@ -74,6 +74,24 @@ class Dashboard extends Component
             ->select('status_trip', DB::raw('count(*) as total'))
             ->groupBy('status_trip')
             ->pluck('total', 'status_trip');
+    }
+
+    private function getTopDriversData()
+    {
+        return Trip::with('user')
+            ->where('status_trip', 'selesai')
+            ->whereMonth('updated_at', now()->month)
+            ->whereYear('updated_at', now()->year)
+            ->groupBy('user_id')
+            ->selectRaw("
+                user_id,
+                SUM(CASE WHEN jenis_trip = 'muatan perusahaan' THEN 1 ELSE 0 END) as trip_perusahaan,
+                SUM(CASE WHEN jenis_trip = 'muatan driver' THEN 1 ELSE 0 END) as trip_driver,
+                count(*) as total_trip
+            ")
+            ->orderByDesc('total_trip')
+            ->limit(5)
+            ->get();
     }
 
     /**
@@ -93,10 +111,10 @@ class Dashboard extends Component
         // Data untuk chart perjalanan (HANYA untuk muat pertama kali)
         $initialTripChart = [
             'data' => $this->getFilteredTripData()->values()->toArray(),
-            'labels' => $this->getFilteredTripData()->keys()->map(fn ($status) => ucfirst($status))->toArray(),
+            'labels' => $this->getFilteredTripData()->keys()->map(fn($status) => ucfirst($status))->toArray(),
         ];
 
-        // ... (Sisa logika render Anda tidak perlu diubah)
+        $topDrivers = $this->getTopDriversData();
         $userRoleData = DB::table('model_has_roles')->join('roles', 'model_has_roles.role_id', '=', 'roles.id')->select('roles.name', DB::raw('count(*) as total'))->groupBy('roles.name')->pluck('total', 'roles.name');
         $userRoleChart = ['labels' => $userRoleData->keys()->map(fn($role) => ucfirst($role)), 'data' => $userRoleData->values()];
         $absensiTerkini = Attendance::with('user')->latest()->take(6)->get();
@@ -104,8 +122,16 @@ class Dashboard extends Component
         $lemburTerkini = Lembur::with('user')->latest()->take(3)->get();
 
         return view('livewire.dashboard', compact(
-            'totalKaryawan', 'totalDriver', 'perjalananAktif', 'karyawanHadirHariIni',
-            'initialTripChart', 'userRoleChart', 'absensiTerkini', 'izinTerkini', 'lemburTerkini'
+            'totalKaryawan',
+            'totalDriver',
+            'perjalananAktif',
+            'karyawanHadirHariIni',
+            'initialTripChart',
+            'userRoleChart',
+            'absensiTerkini',
+            'izinTerkini',
+            'lemburTerkini',
+            'topDrivers'
         ));
     }
 }
