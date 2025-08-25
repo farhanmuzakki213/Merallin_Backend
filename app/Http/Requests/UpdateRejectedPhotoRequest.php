@@ -17,21 +17,83 @@ class UpdateRejectedPhotoRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * Secara dinamis membuat aturan validasi berdasarkan status foto di database.
      */
     public function rules(): array
     {
-        $validPhotoTypes = [
-            'start_km_photo', 'muat_photo', 'end_km_photo', 'delivery_order',
-            'timbangan_kendaraan_photo', 'segel_photo', 'bongkar_photo', 'delivery_letters'
+        /** @var Trip $trip */
+        $trip = $this->route('trip');
+        $rules = [];
+
+       // --- Validasi untuk Foto Tunggal ---
+        $rules['start_km_photo'] = [
+            Rule::requiredIf($trip->start_km_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->start_km_photo_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
         ];
+        $rules['muat_photo'] = [
+            Rule::requiredIf($trip->muat_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->muat_photo_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
+        ];
+        $rules['end_km_photo'] = [
+            Rule::requiredIf($trip->end_km_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->end_km_photo_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
+        ];
+        $rules['delivery_order'] = [
+            Rule::requiredIf($trip->delivery_order_status === 'rejected'),
+            Rule::prohibitedIf($trip->delivery_order_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
+        ];
+        $rules['timbangan_kendaraan_photo'] = [
+            Rule::requiredIf($trip->timbangan_kendaraan_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->timbangan_kendaraan_photo_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
+        ];
+        $rules['segel_photo'] = [
+            Rule::requiredIf($trip->segel_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->segel_photo_status !== 'rejected'), // [BARU]
+            'image', 'max:5120'
+        ];
+
+        // --- Validasi untuk Foto Array ---
+        $rules['bongkar_photo'] = [
+            Rule::requiredIf($trip->bongkar_photo_status === 'rejected'),
+            Rule::prohibitedIf($trip->bongkar_photo_status !== 'rejected'), // [BARU]
+            'array', 'min:1'
+        ];
+        $rules['bongkar_photo.*'] = ['image', 'max:5120'];
+
+        $rules['initial_delivery_letters'] = [
+            Rule::requiredIf($trip->delivery_letter_initial_status === 'rejected'),
+            Rule::prohibitedIf($trip->delivery_letter_initial_status !== 'rejected'), // [BARU]
+            'array', 'min:1'
+        ];
+        $rules['initial_delivery_letters.*'] = ['image', 'max:5120'];
+
+        $rules['final_delivery_letters'] = [
+            Rule::requiredIf($trip->delivery_letter_final_status === 'rejected'),
+            Rule::prohibitedIf($trip->delivery_letter_final_status !== 'rejected'), // [BARU]
+            'array', 'min:1'
+        ];
+        $rules['final_delivery_letters.*'] = ['image', 'max:5120'];
+
+        return $rules;
+    }
+
+    /**
+     * Pesan error yang spesifik untuk setiap field.
+     */
+    public function messages(): array
+    {
         return [
-            'photo_type' => ['required', 'string', Rule::in($validPhotoTypes)],
-            'photo_file' => 'required|file|image|max:5120',
-            'old_photo_path' => ['nullable', 'string', Rule::requiredIf(fn () => in_array($this->input('photo_type'), ['bongkar_photo', 'delivery_letters']))],
-            'letter_type'    => ['nullable', 'string', Rule::in(['initial', 'final']), Rule::requiredIf(fn () => $this->input('photo_type') === 'delivery_letters')],
+            'required'   => ':attribute sebelumnya ditolak. Anda wajib mengunggah file baru.',
+            'prohibited' => 'Aksi ditolak. :attribute tidak sedang dalam status ditolak sehingga tidak dapat diubah.',
+            'array'      => ':attribute harus dalam format array.',
+            'min'        => ':attribute harus memiliki minimal :min item.',
+            'image'      => ':attribute harus berupa file gambar.',
+            'max'        => ':attribute tidak boleh lebih dari 5MB.',
         ];
     }
 }
