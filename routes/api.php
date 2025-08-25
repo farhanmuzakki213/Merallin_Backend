@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- RUTE UNTUK DRIVER ---
     Route::prefix('driver')->group(function () {
 
+        Route::get('/trips', [TripController::class, 'indexDriver']);
         // Mengambil trip dari admin
         Route::post('/trips/{trip}/accept', [TripController::class, 'acceptTrip']);
 
@@ -45,6 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/at-unloading', [TripController::class, 'updateAtUnloadingPoint']);
         Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
         Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
+
+        Route::post('/trips/{trip}/update-rejected-photo', [TripController::class, 'updateRejectedPhoto']);
 
     });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);

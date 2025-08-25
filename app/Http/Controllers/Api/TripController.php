@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateRejectedPhotoRequest;
 use App\Models\Trip;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
@@ -35,11 +38,6 @@ class TripController extends Controller
      */
     public function acceptTrip(Trip $trip)
     {
-        // Pastikan trip tersedia dan belum diambil
-        if ($trip->status_trip !== 'tersedia' || $trip->user_id !== null) {
-            return response()->json(['message' => 'Trip ini tidak tersedia atau sudah diambil.'], 422);
-        }
-
         $trip->update([
             'user_id'     => Auth::id(),
             'status_trip' => 'proses',
@@ -231,6 +229,192 @@ class TripController extends Controller
 
         return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
     }
+
+    /**
+     * [REFACTORED V2] Endpoint fleksibel untuk driver mengupdate foto yang ditolak oleh admin.
+     * Kini mendukung pembaruan 'delivery_letters' secara spesifik (initial/final).
+     */
+    public function updateRejectedPhoto(UpdateRejectedPhotoRequest $request, Trip $trip): JsonResponse
+    {
+        $validated = $request->validated();
+        $photoType = $validated['photo_type'];
+        $photoFile = $validated['photo_file'];
+
+        // 1. Dapatkan konfigurasi untuk tipe foto yang diberikan
+        $config = $this->getPhotoTypeConfig($photoType);
+        if (!$config) {
+            return response()->json(['message' => 'Tipe foto tidak valid.'], 422);
+        }
+
+        // 2. Verifikasi bahwa status foto saat ini adalah 'rejected'
+        $statusColumn = $config['status_column'];
+        if ($trip->{$statusColumn} !== 'rejected') {
+            return response()->json(['message' => 'Hanya foto dengan status "rejected" yang bisa diupdate.'], 403);
+        }
+
+        // 3. Simpan foto baru dan dapatkan path-nya
+        $newPath = $photoFile->storeAs($config['folder'], $this->generateUniqueFileName($photoFile), 'public');
+
+        // 4. Proses pembaruan path dan hapus foto lama
+        $updateData = [];
+        $pathColumn = $config['path_column'];
+        $oldPathToDelete = null;
+
+        if (!$config['is_multiple']) {
+            // Untuk foto tunggal
+            $oldPathToDelete = $trip->{$pathColumn};
+            $updateData[$pathColumn] = $newPath;
+        } else {
+            // Untuk foto ganda (array)
+            $oldPhotoPath = $validated['old_photo_path'];
+            $currentPaths = $trip->{$pathColumn} ?? [];
+            // [MODIFIKASI] Ambil 'letter_type' dari request yang sudah divalidasi
+            $letterType = $validated['letter_type'] ?? null;
+
+            // [MODIFIKASI] Kirim 'letterType' ke metode helper
+            list($updatedPaths, $pathFound) = $this->updatePathInArray($currentPaths, $oldPhotoPath, $newPath, $photoType, $letterType);
+
+            if (!$pathFound) {
+                Storage::disk('public')->delete($newPath); // Hapus file baru jika path lama tidak ditemukan
+                return response()->json(['message' => 'Path foto lama yang spesifik tidak ditemukan.'], 404);
+            }
+            $oldPathToDelete = $oldPhotoPath;
+            $updateData[$pathColumn] = $updatedPaths;
+        }
+
+        // Hapus file foto lama dari storage jika ada
+        if ($oldPathToDelete) {
+            Storage::disk('public')->delete($oldPathToDelete);
+        }
+
+        // 5. Siapkan data untuk mereset status verifikasi di database
+        $baseColumn = $config['base_column'];
+        $updateData[$statusColumn] = 'pending';
+        $updateData[$baseColumn . '_verified_by'] = null;
+        $updateData[$baseColumn . '_verified_at'] = null;
+        $updateData[$baseColumn . '_rejection_reason'] = null;
+
+        // 6. Update data trip
+        $trip->update($updateData);
+
+        // 7. Kembalikan respons sukses dengan data terbaru
+        return response()->json([
+            'message' => 'Foto berhasil diperbarui dan menunggu verifikasi ulang.',
+            'data' => $trip->fresh()
+        ]);
+    }
+
+    /**
+     * [REFACTORED V2] Memperbarui path foto di dalam array untuk tipe foto ganda.
+     *
+     * @param array $currentPaths
+     * @param string $oldPath
+     * @param string $newPath
+     * @param string $photoType
+     * @param string|null $letterType // [MODIFIKASI] Parameter baru
+     * @return array [array $updatedPaths, bool $pathFound]
+     */
+    private function updatePathInArray(array $currentPaths, string $oldPath, string $newPath, string $photoType, ?string $letterType = null): array
+    {
+        $pathFound = false;
+
+        if ($photoType === 'bongkar_photo') {
+            $key = array_search($oldPath, $currentPaths);
+            if ($key !== false) {
+                $currentPaths[$key] = $newPath;
+                $pathFound = true;
+            }
+        } elseif ($photoType === 'delivery_letters') {
+            // [LOGIKA BARU] Langsung menargetkan array yang benar berdasarkan letterType
+            if (!$letterType) {
+                // Seharusnya tidak terjadi karena sudah divalidasi, tapi ini sebagai pengaman
+                return [$currentPaths, false];
+            }
+
+            $targetKey = ($letterType === 'initial') ? 'initial_letters' : 'final_letters';
+
+            if (!empty($currentPaths[$targetKey]) && is_array($currentPaths[$targetKey])) {
+                $index = array_search($oldPath, $currentPaths[$targetKey]);
+                if ($index !== false) {
+                    $currentPaths[$targetKey][$index] = $newPath;
+                    $pathFound = true;
+                }
+            }
+        }
+
+        return [$currentPaths, $pathFound];
+    }
+
+    /**
+     * Mendapatkan konfigurasi (nama kolom, folder, dll) untuk setiap tipe foto.
+     *
+     * @param string $photoType
+     * @return array|null
+     */
+    private function getPhotoTypeConfig(string $photoType): ?array
+    {
+        $config = [
+            'start_km_photo' => [
+                'path_column' => 'start_km_photo_path',
+                'status_column' => 'start_km_photo_status',
+                'base_column' => 'start_km_photo',
+                'folder' => 'trip_photos/start_km_photo',
+                'is_multiple' => false,
+            ],
+            'muat_photo' => [
+                'path_column' => 'muat_photo_path',
+                'status_column' => 'muat_photo_status',
+                'base_column' => 'muat_photo',
+                'folder' => 'trip_photos/muat_photo',
+                'is_multiple' => false,
+            ],
+            'delivery_order' => [
+                'path_column' => 'delivery_order_path',
+                'status_column' => 'delivery_order_status',
+                'base_column' => 'delivery_order',
+                'folder' => 'trip_photos/delivery_order',
+                'is_multiple' => false,
+            ],
+            'timbangan_kendaraan_photo' => [
+                'path_column' => 'timbangan_kendaraan_photo_path',
+                'status_column' => 'timbangan_kendaraan_photo_status',
+                'base_column' => 'timbangan_kendaraan_photo',
+                'folder' => 'trip_photos/timbangan_kendaraan',
+                'is_multiple' => false,
+            ],
+            'segel_photo' => [
+                'path_column' => 'segel_photo_path',
+                'status_column' => 'segel_photo_status',
+                'base_column' => 'segel_photo',
+                'folder' => 'trip_photos/segel_photo',
+                'is_multiple' => false,
+            ],
+            'end_km_photo' => [
+                'path_column' => 'end_km_photo_path',
+                'status_column' => 'end_km_photo_status',
+                'base_column' => 'end_km_photo',
+                'folder' => 'trip_photos/end_km_photo',
+                'is_multiple' => false,
+            ],
+            'bongkar_photo' => [
+                'path_column' => 'bongkar_photo_path',
+                'status_column' => 'bongkar_photo_status',
+                'base_column' => 'bongkar_photo',
+                'folder' => 'trip_photos/bongkar_photo',
+                'is_multiple' => true,
+            ],
+            'delivery_letters' => [
+                'path_column' => 'delivery_letter_path',
+                'status_column' => 'delivery_letter_status',
+                'base_column' => 'delivery_letter',
+                'folder' => 'trip_photos/delivery_letters',
+                'is_multiple' => true,
+            ],
+        ];
+
+        return $config[$photoType] ?? null;
+    }
+
 
     // =================================================================
     // FUNGSI UNTUK MELIHAT DATA (GET)

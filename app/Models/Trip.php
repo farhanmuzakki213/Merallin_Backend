@@ -46,10 +46,14 @@ class Trip extends Model
         'end_km_photo_verified_at',
         'end_km_photo_rejection_reason',
         'delivery_letter_path',
-        'delivery_letter_status',
-        'delivery_letter_verified_by',
-        'delivery_letter_verified_at',
-        'delivery_letter_rejection_reason',
+        'delivery_letter_initial_status',
+        'delivery_letter_initial_verified_by',
+        'delivery_letter_initial_verified_at',
+        'delivery_letter_initial_rejection_reason',
+        'delivery_letter_final_status',
+        'delivery_letter_final_verified_by',
+        'delivery_letter_final_verified_at',
+        'delivery_letter_final_rejection_reason',
         'delivery_order_path',
         'delivery_order_status',
         'delivery_order_verified_by',
@@ -90,7 +94,8 @@ class Trip extends Model
         'muat_photo_verified_at' => 'datetime',
         'bongkar_photo_verified_at' => 'datetime',
         'end_km_photo_verified_at' => 'datetime',
-        'delivery_letter_verified_at' => 'datetime',
+        'delivery_letter_initial_verified_at' => 'datetime',
+        'delivery_letter_final_verified_at' => 'datetime',
         'delivery_order_verified_at' => 'datetime',
         'timbangan_kendaraan_photo_verified_at' => 'datetime',
         'segel_photo_verified_at' => 'datetime',
@@ -134,9 +139,14 @@ class Trip extends Model
         return $this->belongsTo(User::class, 'end_km_photo_verified_by');
     }
 
-    public function verifiedByDeliveryLetter(): BelongsTo
+    public function verifiedByDeliveryLetterInitial(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'delivery_letter_verified_by');
+        return $this->belongsTo(User::class, 'delivery_letter_initial_verified_by');
+    }
+
+    public function verifiedByDeliveryLetterFinal(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivery_letter_final_verified_by');
     }
 
     /**

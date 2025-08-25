@@ -69,10 +69,17 @@ return new class extends Migration
 
             // Surat jalan bisa diupload 2x, kita satukan saja
             $table->text('delivery_letter_path')->nullable();
-            $table->enum('delivery_letter_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('delivery_letter_verified_by')->nullable()->constrained('users');
-            $table->timestamp('delivery_letter_verified_at')->nullable();
-            $table->text('delivery_letter_rejection_reason')->nullable();
+            // Tambahkan kolom baru untuk verifikasi Surat Jalan AWAL (Initial)
+            $table->enum('delivery_letter_initial_status', ['pending', 'approved', 'rejected'])->default('pending')->after('end_km_photo_rejection_reason');
+            $table->foreignId('delivery_letter_initial_verified_by')->nullable()->constrained('users')->after('delivery_letter_initial_status');
+            $table->timestamp('delivery_letter_initial_verified_at')->nullable()->after('delivery_letter_initial_verified_by');
+            $table->text('delivery_letter_initial_rejection_reason')->nullable()->after('delivery_letter_initial_verified_at');
+
+            // Tambahkan kolom baru untuk verifikasi Surat Jalan AKHIR (Final)
+            $table->enum('delivery_letter_final_status', ['pending', 'approved', 'rejected'])->default('pending')->after('delivery_letter_initial_rejection_reason');
+            $table->foreignId('delivery_letter_final_verified_by')->nullable()->constrained('users')->after('delivery_letter_final_status');
+            $table->timestamp('delivery_letter_final_verified_at')->nullable()->after('delivery_letter_final_verified_by');
+            $table->text('delivery_letter_final_rejection_reason')->nullable()->after('delivery_letter_final_verified_at');
 
             // Status Utama
             $table->enum('status_trip', ['tersedia', 'proses', 'selesai'])->default('tersedia');

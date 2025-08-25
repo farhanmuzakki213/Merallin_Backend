@@ -314,10 +314,29 @@
                                     @endif
                                     {{-- Surat Jalan (SJ) --}}
                                     @if (!empty($trip->delivery_letter_path))
-                                        <div class="flex w-full items-center justify-between gap-2">
-                                            <button wire:click="openDeliveryLetterModal({{ $trip->id }})" class="flex-1 rounded bg-blue-100 px-2 py-1 text-left text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">Surat Jalan (SJ)</button>
-                                            @include('livewire.tripTable.verification-status', ['status' => $trip->delivery_letter_status, 'tripId' => $trip->id, 'photoType' => 'delivery_letter'])
-                                        </div>
+                                        {{-- Verifikasi untuk Surat Jalan AWAL (Initial Letters) --}}
+                                        @if (!empty($trip->delivery_letter_path['initial_letters']))
+                                            <div class="flex w-full items-center justify-between gap-2">
+                                                <button wire:click="openDeliveryLetterModal({{ $trip->id }})" class="flex-1 rounded bg-blue-100 px-2 py-1 text-left text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">SJ (Awal)</button>
+                                                @include('livewire.tripTable.verification-status', [
+                                                    'status' => $trip->delivery_letter_initial_status,
+                                                    'tripId' => $trip->id,
+                                                    'photoType' => 'delivery_letter_initial'
+                                                ])
+                                            </div>
+                                        @endif
+
+                                        {{-- Verifikasi untuk Surat Jalan AKHIR (Final Letters) --}}
+                                        @if (!empty($trip->delivery_letter_path['final_letters']))
+                                            <div class="flex w-full items-center justify-between gap-2">
+                                                <button wire:click="openDeliveryLetterModal({{ $trip->id }})" class="flex-1 rounded bg-blue-100 px-2 py-1 text-left text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-700 dark:text-blue-200">SJ (Akhir)</button>
+                                                @include('livewire.tripTable.verification-status', [
+                                                    'status' => $trip->delivery_letter_final_status,
+                                                    'tripId' => $trip->id,
+                                                    'photoType' => 'delivery_letter_final'
+                                                ])
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
                             </div>

@@ -162,12 +162,14 @@ class TripTable extends Component
             "{$photoType}_rejection_reason" => null,
         ]);
         $trip->refresh();
+        $initialLetterApproved = !isset($trip->delivery_letter_path['initial_letters']) || $trip->delivery_letter_initial_status === 'approved';
+        $finalLetterApproved = !isset($trip->delivery_letter_path['final_letters']) || $trip->delivery_letter_final_status === 'approved';
 
         $allDocumentsApproved = $trip->start_km_photo_path && $trip->start_km_photo_status === 'approved' &&
             $trip->muat_photo_path && $trip->muat_photo_status === 'approved' &&
             $trip->bongkar_photo_path && $trip->bongkar_photo_status === 'approved' &&
             $trip->end_km_photo_path && $trip->end_km_photo_status === 'approved' &&
-            $trip->delivery_letter_path && $trip->delivery_letter_status === 'approved' &&
+            $trip->delivery_letter_path && $initialLetterApproved && $finalLetterApproved &&
             $trip->delivery_order_path && $trip->delivery_order_status === 'approved' &&
             $trip->timbangan_kendaraan_photo_path && $trip->timbangan_kendaraan_photo_status === 'approved' &&
             $trip->segel_photo_path && $trip->segel_photo_status === 'approved';
