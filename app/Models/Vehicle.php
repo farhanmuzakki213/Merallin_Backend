@@ -19,4 +19,9 @@ class Vehicle extends Model
         'model',
         'type',
     ];
+
+    public function vehicleLocations()
+    {
+        return $this->hasMany(VehicleLocation::class);
+    }
 }

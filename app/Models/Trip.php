@@ -262,4 +262,9 @@ class Trip extends Model
             }
         );
     }
+
+    public function vehicleLocations()
+    {
+        return $this->hasMany(VehicleLocation::class);
+    }
 }

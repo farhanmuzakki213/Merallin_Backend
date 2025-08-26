@@ -91,4 +91,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Lembur::class);
     }
+
+    public function vehicleLocations()
+    {
+        return $this->hasMany(vehicleLocation::class);
+    }
 }

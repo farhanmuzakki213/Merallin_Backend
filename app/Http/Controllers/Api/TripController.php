@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateRejectedPhotoRequest;
 use App\Models\Trip;
+use App\Models\Vehicle;
+use App\Models\VehicleLocation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -167,7 +169,30 @@ class TripController extends Controller
             'status_lokasi' => 'di lokasi bongkar',
             'status_muatan' => 'proses bongkar',
         ]);
-        return response()->json(['message' => 'Status berhasil diupdate: Tiba di lokasi bongkar.', 'data' => $trip]);
+
+        $normalizedLicensePlate = Str::lower(str_replace(' ', '', $trip->license_plate));
+
+        $vehicle = Vehicle::whereRaw("LOWER(REPLACE(license_plate, ' ', '')) = ?", [$normalizedLicensePlate])->first();
+
+        if (!$vehicle) {
+            $vehicle = Vehicle::create([
+                'license_plate' => $normalizedLicensePlate,
+            ]);
+        }
+
+        VehicleLocation::create([
+            'vehicle_id'  => $vehicle->id,
+            'user_id'     => $trip->user_id,
+            'location'    => $trip->destination,
+            'event_type'  => 'trip_completion',
+            'trip_id'     => $trip->id,
+            'remarks'     => 'Telah tiba di lokasi bongkar: ' . $trip->destination,
+            'reported_at' => now(),
+        ]);
+        return response()->json([
+            'message' => 'Status berhasil diupdate dan lokasi kendaraan telah dicatat.',
+            'data' => $trip,
+        ]);
     }
 
     /**
