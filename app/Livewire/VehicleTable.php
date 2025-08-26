@@ -7,6 +7,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Illuminate\Validation\Rule;
 
 #[Layout('layouts.app')]
 #[Title('Vehicles Data Table')]
@@ -27,8 +28,12 @@ class VehicleTable extends Component
     protected function rules()
     {
         return [
-            // Pastikan license_plate unik, kecuali untuk data yang sedang diedit
-            'license_plate' => 'required|string|max:255|unique:vehicles,license_plate,' . $this->vehicleId,
+            'license_plate' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('vehicles')->ignore($this->vehicleId),
+            ],
             'model' => 'nullable|string|max:255',
             'type' => 'nullable|string|max:255',
         ];

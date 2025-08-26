@@ -7,6 +7,7 @@ use App\Livewire\LemburTable;
 use App\Livewire\Profile;
 use App\Livewire\TripTable;
 use App\Livewire\UserTable;
+use App\Livewire\VehicleTable;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/izin-karyawan', IzinTable::class)->name('izin.table');
 
     Route::get('/lembur', LemburTable::class)->middleware(['auth'])->name('lembur.table');
+
+    Route::get('/vehicles', VehicleTable::class)->name('vehicles.table');
 });
 
 require __DIR__.'/auth.php';
