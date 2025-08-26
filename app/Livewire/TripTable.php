@@ -196,13 +196,13 @@ class TripTable extends Component
                 return;
             }
 
-            // Cek apakah ada yang ditolak
-            if (in_array('rejected', $documentStatuses)) {
-                $trip->update(['status_trip' => 'revisi gambar']);
-            }
-            // Cek apakah ada yang masih pending
-            elseif (in_array('pending', $documentStatuses)) {
+            // Cek apakah ada yang pending
+            if (in_array('pending', $documentStatuses)) {
                 $trip->update(['status_trip' => 'verifikasi gambar']);
+            }
+            // Cek apakah ada yang masih ditolak
+            elseif (in_array('rejected', $documentStatuses)) {
+                $trip->update(['status_trip' => 'revisi gambar']);
             }
             // Jika tidak ada yang ditolak atau pending, berarti semua disetujui
             else {
