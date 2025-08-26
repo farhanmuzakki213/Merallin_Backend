@@ -72,7 +72,7 @@ class TripTable extends Component
             ->groupBy('user_id')
             ->selectRaw("
                 user_id,
-                SUM(CASE WHEN jenis_trip = 'muatan perusahaan' THEN 1 ELSE 0 END) as trip_perusahaan,
+                SUM(CASE WHEN jenis_trip = 'muatan perusahan' THEN 1 ELSE 0 END) as trip_perusahaan,
                 SUM(CASE WHEN jenis_trip = 'muatan driver' THEN 1 ELSE 0 END) as trip_driver
             ")
             ->get();
