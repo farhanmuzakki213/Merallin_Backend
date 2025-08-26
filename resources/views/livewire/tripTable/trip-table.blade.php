@@ -249,7 +249,16 @@
                                 {{-- Trip Status --}}
                                 <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
                                     @if (!$trip->status_lokasi && !$trip->status_muatan)
-                                        <span class="font-medium">{{ ucfirst($trip->status_trip) }}</span>
+                                        <p @class([
+                                            'text-theme-xs rounded-full px-2 py-0.5 font-medium',
+                                            'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500' => $trip->status_trip == 'tersedia',
+                                            'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-500' => $trip->status_trip == 'proses',
+                                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500' => $trip->status_trip == 'verifikasi gambar',
+                                            'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500' => $trip->status_trip == 'revisi gambar',
+                                            'bg-gray-700 text-white dark:bg-gray-600 dark:text-gray-200' => $trip->status_trip == 'selesai',
+                                        ])>
+                                            {{ ucfirst($trip->status_trip) }}
+                                        </p>
                                     @else
                                         <div>
                                             <p class="font-medium text-gray-800 dark:text-white/90">{{ ucfirst($trip->status_lokasi) ?? '...' }}</p>

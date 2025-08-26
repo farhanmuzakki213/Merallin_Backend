@@ -161,24 +161,53 @@ class TripTable extends Component
             "{$photoType}_verified_at" => now(),
             "{$photoType}_rejection_reason" => null,
         ]);
-        $trip->refresh();
-        $initialLetterApproved = !isset($trip->delivery_letter_path['initial_letters']) || $trip->delivery_letter_initial_status === 'approved';
-        $finalLetterApproved = !isset($trip->delivery_letter_path['final_letters']) || $trip->delivery_letter_final_status === 'approved';
+        $this->updateTripStatus($trip->fresh());
 
-        $allDocumentsApproved = $trip->start_km_photo_path && $trip->start_km_photo_status === 'approved' &&
-            $trip->muat_photo_path && $trip->muat_photo_status === 'approved' &&
-            $trip->bongkar_photo_path && $trip->bongkar_photo_status === 'approved' &&
-            $trip->end_km_photo_path && $trip->end_km_photo_status === 'approved' &&
-            $trip->delivery_letter_path && $initialLetterApproved && $finalLetterApproved &&
-            $trip->delivery_order_path && $trip->delivery_order_status === 'approved' &&
-            $trip->timbangan_kendaraan_photo_path && $trip->timbangan_kendaraan_photo_status === 'approved' &&
-            $trip->segel_photo_path && $trip->segel_photo_status === 'approved';
+        session()->flash('message', 'Photo has been approved.');
+    }
 
-        if ($allDocumentsApproved) {
-            $trip->update(['status_trip' => 'selesai']);
-            session()->flash('message', 'Photo approved. All documents complete, Trip is now finished!');
-        } else {
-            session()->flash('message', 'Photo has been approved.');
+    /**
+     * Memperbarui status trip utama berdasarkan status verifikasi semua dokumen.
+     */
+    private function updateTripStatus(Trip $trip)
+    {
+        if ($trip->status_lokasi === null && $trip->status_muatan === null && $trip->status_trip !== 'tersedia') {
+
+            $documentStatuses = [];
+
+            // Kumpulkan status dari semua dokumen yang relevan
+            if ($trip->start_km_photo_path) $documentStatuses[] = $trip->start_km_photo_status;
+            if ($trip->muat_photo_path) $documentStatuses[] = $trip->muat_photo_status;
+            if ($trip->bongkar_photo_path) $documentStatuses[] = $trip->bongkar_photo_status;
+            if ($trip->end_km_photo_path) $documentStatuses[] = $trip->end_km_photo_status;
+            if ($trip->delivery_order_path) $documentStatuses[] = $trip->delivery_order_status;
+            if ($trip->timbangan_kendaraan_photo_path) $documentStatuses[] = $trip->timbangan_kendaraan_photo_status;
+            if ($trip->segel_photo_path) $documentStatuses[] = $trip->segel_photo_status;
+
+            if (!empty($trip->delivery_letter_path['initial_letters'])) {
+                $documentStatuses[] = $trip->delivery_letter_initial_status;
+            }
+            if (!empty($trip->delivery_letter_path['final_letters'])) {
+                $documentStatuses[] = $trip->delivery_letter_final_status;
+            }
+
+            // Jika tidak ada dokumen sama sekali, jangan ubah status
+            if (empty($documentStatuses)) {
+                return;
+            }
+
+            // Cek apakah ada yang ditolak
+            if (in_array('rejected', $documentStatuses)) {
+                $trip->update(['status_trip' => 'revisi gambar']);
+            }
+            // Cek apakah ada yang masih pending
+            elseif (in_array('pending', $documentStatuses)) {
+                $trip->update(['status_trip' => 'verifikasi gambar']);
+            }
+            // Jika tidak ada yang ditolak atau pending, berarti semua disetujui
+            else {
+                $trip->update(['status_trip' => 'selesai']);
+            }
         }
     }
 
@@ -208,6 +237,7 @@ class TripTable extends Component
             "{$this->rejectionPhotoType}_rejection_reason" => $this->rejectionReason,
         ]);
 
+        $this->updateTripStatus($trip->fresh());
         session()->flash('message', 'Photo has been rejected with a reason.');
         $this->closeRejectionModal();
     }
@@ -410,7 +440,7 @@ class TripTable extends Component
                     ->orWhereHas('user', function ($q) {
                         $q->where('name', 'like', '%' . $this->detailSearch . '%');
                     });
-            })->whereIn('status_trip', ['proses', 'selesai']);
+            })->whereIn('status_trip', ['proses', 'selesai', 'revisi gambar', 'verifikasi gambar']);
 
         if ($this->detailSortField === 'user.name') {
             $detailTripsQuery->join('users', 'trips.user_id', '=', 'users.id')

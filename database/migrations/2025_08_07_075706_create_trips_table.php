@@ -82,7 +82,13 @@ return new class extends Migration
             $table->text('delivery_letter_final_rejection_reason')->nullable()->after('delivery_letter_final_verified_at');
 
             // Status Utama
-            $table->enum('status_trip', ['tersedia', 'proses', 'selesai'])->default('tersedia');
+            $table->enum('status_trip', [
+                'tersedia',
+                'proses',
+                'verifikasi gambar',
+                'revisi gambar',
+                'selesai'
+            ])->default('tersedia');
             $table->enum('jenis_trip', ['muatan driver', 'muatan perusahan'])->default('muatan perusahan');
 
             // Status Detail (mengikuti alur)

@@ -223,6 +223,7 @@ class TripController extends Controller
             'end_km_photo_path'  => $endKmPath,
             'end_km'             => $validated['end_km'],
             'delivery_letter_path' => $deliveryData,
+            'status_trip'         => 'verifikasi gambar',
             'status_lokasi'      => null,
             'status_muatan'      => null,
         ]);
@@ -234,7 +235,7 @@ class TripController extends Controller
      * [REFACTORED V2] Endpoint fleksibel untuk driver mengupdate foto yang ditolak oleh admin.
      * Kini mendukung pembaruan 'delivery_letters' secara spesifik (initial/final).
      */
-     public function updateRejectedPhoto(UpdateRejectedPhotoRequest $request, Trip $trip): JsonResponse
+    public function updateRejectedPhoto(UpdateRejectedPhotoRequest $request, Trip $trip): JsonResponse
     {
         // Peta konfigurasi untuk foto tunggal
         $singlePhotoMap = [
@@ -300,7 +301,7 @@ class TripController extends Controller
         }
         $trip->delivery_letter_path = $deliveryLetterPaths;
 
-        // Simpan semua perubahan ke database
+        $trip->status_trip = 'verifikasi gambar';
         $trip->save();
 
         return response()->json([
