@@ -89,11 +89,11 @@ const initDonutChart = () => {
             colors: ["#3C50E0", "#6577F3", "#80CAEE"],
             legend: { show: true, position: 'bottom' },
             dataLabels: {
-            enabled: true,
-            dropShadow: {
-                enabled: false,
-            }
-        },
+                enabled: true,
+                dropShadow: {
+                    enabled: false,
+                }
+            },
             plotOptions: {
                 pie: {
                     donut: {
@@ -207,4 +207,68 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Pastikan kode ini hanya berjalan jika pengguna sudah login
+    // Anda bisa menambahkan pengecekan elemen yang hanya ada jika user login, jika perlu
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.register('/service-worker.js').then(function (swReg) {
+            console.log('Service Worker is registered', swReg);
+            askForNotificationPermission(swReg);
+        }).catch(function (error) {
+            console.error('Service Worker Error', error);
+        });
+    }
+});
+
+function askForNotificationPermission(swReg) {
+    Notification.requestPermission().then(function (result) {
+        if (result === 'granted') {
+            console.log('Notification permission granted.');
+            subscribeUser(swReg);
+        }
+    });
+}
+
+function subscribeUser(swReg) {
+    const vapidPublicKeyElement = document.querySelector('meta[name="vapid-public-key"]');
+
+    if (!vapidPublicKeyElement) {
+        console.log('VAPID public key meta tag not found. Skipping subscription.');
+        return;
+    }
+    const vapidPublicKey = vapidPublicKeyElement.content;
+    const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+
+    swReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+    }).then(function(subscription) {
+        console.log('User is subscribed:', subscription);
+        sendSubscriptionToServer(subscription);
+    }).catch(function(err) {
+        console.log('Failed to subscribe the user: ', err);
+    });
+}
+
+function sendSubscriptionToServer(subscription) {
+    // Gunakan Axios yang sudah Anda setup di bootstrap.js
+    window.axios.post('/push-subscribe', subscription)
+        .then(function (response) {
+            if (response.status === 200) {
+                console.log('Push subscription saved.');
+            }
+        });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
 

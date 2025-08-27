@@ -155,6 +155,11 @@ class TripTable extends Component
     public function approvePhoto($tripId, $photoType)
     {
         $trip = Trip::findOrFail($tripId);
+        $statusField = "{$photoType}_status";
+        if ($trip->{$statusField} !== 'pending') {
+            session()->flash('error', 'Gagal: Gambar ini sudah diverifikasi oleh admin lain.');
+            return;
+        }
         $trip->update([
             "{$photoType}_status" => 'approved',
             "{$photoType}_verified_by" => Auth::id(),
@@ -196,13 +201,11 @@ class TripTable extends Component
                 return;
             }
 
-            if(in_array('rejected', $documentStatuses)) {
+            if (in_array('rejected', $documentStatuses)) {
                 $trip->update(['status_trip' => 'revisi gambar']);
-            }
-            elseif (in_array('pending', $documentStatuses)) {
+            } elseif (in_array('pending', $documentStatuses)) {
                 $trip->update(['status_trip' => 'verifikasi gambar']);
-            }
-            else {
+            } else {
                 $trip->update(['status_trip' => 'selesai']);
             }
         }
@@ -227,6 +230,13 @@ class TripTable extends Component
         $this->validate(['rejectionReason' => 'required|string|min:10']);
 
         $trip = Trip::findOrFail($this->rejectionTripId);
+        $photoType = $this->rejectionPhotoType;
+        $statusField = "{$photoType}_status";
+        if ($trip->{$statusField} !== 'pending') {
+            session()->flash('error', 'Gagal: Gambar ini sudah diverifikasi oleh admin lain.');
+            $this->closeRejectionModal();
+            return;
+        }
         $trip->update([
             "{$this->rejectionPhotoType}_status" => 'rejected',
             "{$this->rejectionPhotoType}_verified_by" => Auth::id(),

@@ -9,12 +9,14 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\Attendance;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use NotificationChannels\WebPush\PushSubscription;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, HasPushSubscriptions;
 
     /**
      * The attributes that are mass assignable.
@@ -57,6 +59,11 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
+
+    public function pushSubscriptions(): MorphMany
+    {
+        return $this->morphMany(PushSubscription::class, 'subscribable');
+    }
 
     /* *
      * Ambil URL untuk gambar profil pengguna.

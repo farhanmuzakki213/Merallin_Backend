@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "aws/aws-sdk-php": "^3.352",
+        "laravel-notification-channels/webpush": "^10.2",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",

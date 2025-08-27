@@ -10,6 +10,7 @@ use App\Livewire\UserTable;
 use App\Livewire\VehicleLocationTable;
 use App\Livewire\VehicleTable;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -19,6 +20,17 @@ Route::middleware('auth')->group(function () {
     Route::get('dashboard', Dashboard::class)
         ->middleware(['verified'])
         ->name('dashboard');
+
+    Route::post('/push-subscribe', function (Request $request) {
+        $user = auth()->user();
+        $user->updatePushSubscription(
+            $request->endpoint,
+            $request->keys['p256dh'],
+            $request->keys['auth']
+        );
+
+        return response()->json(['success' => true], 200);
+    });
 
     Route::get('profile', Profile::class)
         ->name('profile');

@@ -2,8 +2,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "vite build"
+        "dev": "shx cp resources/js/service-worker.js public/service-worker.js && vite",
+        "build": "shx cp resources/js/service-worker.js public/service-worker.js && vite build"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.9",
@@ -14,8 +14,10 @@
         "axios": "^1.6.4",
         "laravel-vite-plugin": "^1.0.0",
         "postcss": "^8.4.39",
+        "shx": "^0.4.0",
         "tailwindcss": "^4.0.0",
-        "vite": "^5.0.0"
+        "vite": "^5.0.0",
+        "vite-plugin-static-copy": "^0.17.0"
     },
     "dependencies": {
         "@alpinejs/persist": "^3.14.9",
