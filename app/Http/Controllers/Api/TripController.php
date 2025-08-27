@@ -17,6 +17,51 @@ use Illuminate\Support\Str;
 class TripController extends Controller
 {
     /**
+     * Memeriksa foto yang diunggah, jika ada yang sebelumnya 'rejected',
+     * maka siapkan data untuk mereset status trip dan status foto tersebut.
+     *
+     * @param \App\Models\Trip $trip
+     * @param array $photoTypes
+     * @return array
+     */
+    private function getFieldsToReset(Trip $trip, array $photoTypes): array
+    {
+        // Peta jenis foto ke kolom statusnya di database
+        $statusMap = [
+            'start_km_photo'            => 'start_km_photo_status',
+            'muat_photo'                => 'muat_photo_status',
+            'bongkar_photo'             => 'bongkar_photo_status',
+            'end_km_photo'              => 'end_km_photo_status',
+            'delivery_order'            => 'delivery_order_status',
+            'timbangan_kendaraan_photo' => 'timbangan_kendaraan_photo_status',
+            'segel_photo'               => 'segel_photo_status',
+            'delivery_letters_initial'  => 'delivery_letter_initial_status',
+            'delivery_letters_final'    => 'delivery_letter_final_status',
+        ];
+
+        $updates = [];
+        $tripStatusShouldBeReset = false;
+
+        foreach ($photoTypes as $type) {
+            $statusField = $statusMap[$type] ?? null;
+            // Jika status field ada dan nilainya 'rejected'
+            if ($statusField && $trip->{$statusField} === 'rejected') {
+                // Tandai bahwa status foto ini perlu diubah ke 'pending'
+                $updates[$statusField] = 'pending';
+                $tripStatusShouldBeReset = true;
+            }
+        }
+
+        // Jika ada setidaknya satu foto rejected yang diupload ulang,
+        // maka status trip utama juga direset.
+        if ($tripStatusShouldBeReset) {
+            $updates['status_trip'] = 'verifikasi gambar';
+        }
+
+        return $updates;
+    }
+
+    /**
      * Membuat nama file yang unik berdasarkan nama user, tanggal, dan kode unik.
      *
      * @param \Illuminate\Http\UploadedFile $file
@@ -63,13 +108,19 @@ class TripController extends Controller
         $fileName = $this->generateUniqueFileName($photoFile);
         $path = $photoFile->storeAs('trip_photos/start_km_photo', $fileName, 'public');
 
-        $trip->update([
-            'license_plate'       => $validated['license_plate'],
-            'start_km'            => $validated['start_km'],
+        $updateData = [
+            'license_plate'       => $request->license_plate,
+            'start_km'            => $request->start_km,
             'start_km_photo_path' => $path,
             'status_lokasi'       => 'menuju lokasi muat',
             'status_muatan'       => 'kosong',
-        ]);
+        ];
+
+        // Cek dan dapatkan field yang perlu direset, lalu gabungkan
+        $resets = $this->getFieldsToReset($trip, ['start_km_photo']);
+        $updateData = array_merge($updateData, $resets);
+
+        $trip->update($updateData);
 
         return response()->json(['message' => 'Data awal perjalanan berhasil diupdate.', 'data' => $trip]);
     }
@@ -120,12 +171,18 @@ class TripController extends Controller
         }
         $deliveryData = ['initial_letters' => $initialLetterPaths];
 
-        $trip->update([
+        $updateData = [
             'muat_photo_path'      => $muatPath,
             'delivery_letter_path' => $deliveryData,
             'status_lokasi'        => 'menuju lokasi bongkar',
             'status_muatan'        => 'termuat',
-        ]);
+        ];
+
+        // Cek dan dapatkan field yang perlu direset, lalu gabungkan
+        $resets = $this->getFieldsToReset($trip, ['muat_photo', 'delivery_letters_initial']);
+        $updateData = array_merge($updateData, $resets);
+
+        $trip->update($updateData);
 
         return response()->json(['message' => 'Data muatan berhasil diupload.', 'data' => $trip]);
     }
@@ -154,6 +211,9 @@ class TripController extends Controller
         $segelFile = $request->file('segel_photo');
         $segelFileName = $this->generateUniqueFileName($segelFile);
         $updateData['segel_photo_path'] = $segelFile->storeAs('trip_photos/segel_photo', $segelFileName, 'public');
+
+        $resets = $this->getFieldsToReset($trip, ['delivery_order', 'timbangan_kendaraan_photo', 'segel_photo']);
+        $updateData = array_merge($updateData, $resets);
 
         $trip->update($updateData);
 
@@ -243,7 +303,7 @@ class TripController extends Controller
         $deliveryData = $trip->delivery_letter_path;
         $deliveryData['final_letters'] = $finalLetterPaths;
 
-        $trip->update([
+        $updateData = [
             'bongkar_photo_path' => $bongkarPaths,
             'end_km_photo_path'  => $endKmPath,
             'end_km'             => $validated['end_km'],
@@ -251,7 +311,13 @@ class TripController extends Controller
             'status_trip'         => 'verifikasi gambar',
             'status_lokasi'      => null,
             'status_muatan'      => null,
-        ]);
+        ];
+
+        // Cek dan dapatkan field yang perlu direset, lalu gabungkan
+        $resets = $this->getFieldsToReset($trip, ['bongkar_photo', 'end_km_photo', 'delivery_letters_final']);
+        $updateData = array_merge($updateData, $resets);
+
+        $trip->update($updateData);
 
         return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
     }
