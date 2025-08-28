@@ -272,3 +272,57 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+window.notificationMenu = function() {
+    return {
+        dropdownOpen: false,
+        unread: [],
+        read: [],
+        unreadCount: 0,
+        rootElement: document.querySelector('#notification-bell'),
+
+        // Inisialisasi komponen
+        init() {
+            if (!this.rootElement) return;
+            this.fetchNotifications();
+        },
+
+        // Mengambil data notifikasi dari server
+        fetchNotifications() {
+            const indexUrl = this.rootElement.dataset.indexUrl;
+            axios.get(indexUrl)
+                .then(response => {
+                    this.unread = response.data.unread;
+                    this.read = response.data.read;
+                    this.unreadCount = response.data.unread_count;
+                })
+                .catch(error => console.error('Gagal mengambil notifikasi:', error));
+        },
+
+        // Membuka menu dan menandai notifikasi sebagai sudah dibaca
+        openMenu() {
+            this.dropdownOpen = !this.dropdownOpen;
+            if (this.dropdownOpen && this.unreadCount > 0) {
+                this.markAsRead();
+            }
+        },
+
+        // Mengirim request untuk menandai notifikasi
+        markAsRead() {
+            const markAsReadUrl = this.rootElement.dataset.markAsReadUrl;
+            axios.post(markAsReadUrl)
+                .then(response => {
+                    if (response.status === 200) {
+                        this.unreadCount = 0; // Hilangkan indikator notif baru
+                    }
+                })
+                .catch(error => console.error('Gagal menandai notifikasi:', error));
+        },
+
+        // Memformat tanggal agar mudah dibaca
+        formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateString).toLocaleDateString('id-ID', options);
+        }
+    }
+};
+

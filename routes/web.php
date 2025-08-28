@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationController;
 use App\Livewire\AttendanceTable;
 use App\Livewire\Dashboard;
 use App\Livewire\IzinTable;
@@ -41,13 +42,13 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/trips/table', TripTable::class)->name('trips.table');
 
-    Route::get('/izin-karyawan', IzinTable::class)->name('izin.table');
+    Route::get('/izin-karyawan/table', IzinTable::class)->name('izin.table');
 
-    Route::get('/lembur', LemburTable::class)->middleware(['auth'])->name('lembur.table');
+    Route::get('/lembur/table', LemburTable::class)->middleware(['auth'])->name('lembur.table');
 
-    Route::get('/vehicles', VehicleTable::class)->name('vehicles.table');
+    Route::get('/vehicles/table', VehicleTable::class)->name('vehicles.table');
 
-    Route::get('/vehicle-locations', VehicleLocationTable::class)->name('vehicleLocations.table');
+    Route::get('/vehicle-locations/table', VehicleLocationTable::class)->name('vehicleLocations.table');
 });
 
 require __DIR__ . '/auth.php';

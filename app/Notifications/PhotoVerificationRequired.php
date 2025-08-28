@@ -15,21 +15,35 @@ class PhotoVerificationRequired extends Notification
 
     protected $trip;
     protected $message;
+    protected $title; // <-- TAMBAHKAN INI
 
-    public function __construct(Trip $trip, string $message)
+    public function __construct(Trip $trip, string $message, string $title = 'Verifikasi Foto Diperlukan') // <-- TAMBAHKAN DEFAULT TITLE
     {
         $this->trip = $trip;
         $this->message = $message;
-        // dd($this->message, $this->trip);
+        $this->title = $title; // <-- INISIALISASI
     }
 
     public function via($notifiable): array
     {
+        $channels = ['database'];
+
         $notifiable->load('pushSubscriptions');
         if ($notifiable->pushSubscriptions->isNotEmpty()) {
-            return [WebPushChannel::class];
+            $channels[] = WebPushChannel::class;
         }
-        return [];
+        return $channels;
+    }
+
+    public function toDatabase($notifiable): array
+    {
+        return [
+            'title'   => $this->title,     // <-- TAMBAHKAN TITLE
+            'message' => $this->message,
+            'trip_id' => $this->trip->id,
+            'url'     => route('trips.table'),
+            'type'    => 'trip_photo', // <-- TAMBAHKAN TIPE UNTUK ICON
+        ];
     }
 
     public function toWebPush($notifiable, $notification)
@@ -42,14 +56,13 @@ class PhotoVerificationRequired extends Notification
             'penerima_id' => $notifiable->id
         ]);
 
-        // HAPUS BARIS INI:
-        // dd($this->message, $url, $notifiable->toArray());
-
         return (new WebPushMessage)
-            ->title('Verifikasi Foto Diperlukan')
-            // ->icon('/icon.png') // Anda bisa uncomment ini jika punya file icon di public/icon.png
+            ->title($this->title) // Menggunakan title dari konstruktor
             ->body($this->message)
-            ->action('Lihat Detail', 'view_trip') // 'view_trip' adalah tag aksi
-            ->data(['url' => $url]);
+            ->image(asset('storage/app/public/trip_photos/' . $this->trip->photo_filename)) // Contoh: Tambahkan gambar dari trip jika ada
+            ->icon(asset('favicon.png')) // Icon kecil di notifikasi
+            ->badge(asset('badge.png')) // Badge untuk Android
+            ->action('Lihat Detail', 'view_trip') // Tombol aksi
+            ->data(['url' => $url, 'notification_id' => $notification->id, 'trip_id' => $this->trip->id]);
     }
 }

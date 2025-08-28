@@ -251,9 +251,9 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'delivery_order'            => 'sometimessometimes|image|max:5120',
-                'timbangan_kendaraan_photo' => 'sometimessometimes|image|max:5120',
-                'segel_photo'               => 'sometimessometimes|image|max:5120',
+                'delivery_order'            => 'sometimes|image|max:5120',
+                'timbangan_kendaraan_photo' => 'sometimes|image|max:5120',
+                'segel_photo'               => 'sometimes|image|max:5120',
             ]);
 
             $updateData = [];
