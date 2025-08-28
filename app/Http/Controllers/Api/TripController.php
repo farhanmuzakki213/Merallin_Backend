@@ -223,7 +223,7 @@ class TripController extends Controller
         $validator = Validator::make($request->all(), [
             'muat_photo'        => 'sometimes|image|max:5120',
             'delivery_letters'    => 'sometimes|array',
-            'delivery_letters.*'  => 'image|max:5120',
+            'delivery_letters.*'  => 'image|max:20480',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
@@ -390,9 +390,9 @@ class TripController extends Controller
             'end_km'            => 'sometimes|integer|gt:' . ($trip->start_km ?? 0),
             'end_km_photo'      => 'sometimes|image|max:5120',
             'bongkar_photo'     => 'sometimes|array',
-            'bongkar_photo.*'   => 'image|max:5120',
+            'bongkar_photo.*'   => 'image|max:20480',
             'delivery_letters'  => 'sometimes|array',
-            'delivery_letters.*' => 'image|max:5120',
+            'delivery_letters.*' => 'image|max:20480',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
