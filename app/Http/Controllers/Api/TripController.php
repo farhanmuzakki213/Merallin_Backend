@@ -19,6 +19,7 @@ use App\Notifications\PhotoVerificationRequired;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\PushSubscription;
 
@@ -151,39 +152,45 @@ class TripController extends Controller
      */
     public function updateStart(Request $request, Trip $trip)
     {
+        $validator = Validator::make($request->all(), [
+            'license_plate'   => 'sometimes|string|max:20',
+            'start_km'        => 'sometimes|integer',
+            'start_km_photo'  => 'sometimes|image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'license_plate'   => 'sometimes|string|max:20',
-                'start_km'        => 'sometimes|integer',
-                'start_km_photo'  => 'sometimes|image|max:5120',
-            ]);
+            $validated = $validator->validated();
+            $trip->fill($this->getFieldsToReset($trip, ['start_km_photo']));
 
-            $photoFile = $request->file('start_km_photo');
-            $fileName = $this->generateUniqueFileName($photoFile);
-            $path = $photoFile->storeAs('trip_photos/start_km_photo', $fileName, 'public');
+            if (isset($validated['license_plate'])) $trip->license_plate = $validated['license_plate'];
+            if (isset($validated['start_km'])) $trip->start_km = $validated['start_km'];
 
-            $updateData = [
-                'license_plate'       => $request->license_plate,
-                'start_km'            => $request->start_km,
-                'start_km_photo_path' => $path,
-                'status_lokasi'       => 'menuju lokasi muat',
-                'status_muatan'       => 'kosong',
-            ];
+            if ($request->hasFile('start_km_photo')) {
+                if ($trip->start_km_photo_path) Storage::disk('public')->delete($trip->start_km_photo_path);
 
-            // Cek dan dapatkan field yang perlu direset, lalu gabungkan
-            $resets = $this->getFieldsToReset($trip, ['start_km_photo']);
-            $updateData = array_merge($updateData, $resets);
-            $trip->update($updateData);
+                $file = $request->file('start_km_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/start_km_photo', $fileName, 'public');
 
-            $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal', Storage::url($path));
+                $trip->start_km_photo_path = $path;
+                $trip->start_km_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+
+                $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal', Storage::url($path));
+            } else {
+                $trip->save();
+            }
 
             DB::commit();
-            return response()->json(['message' => 'Data awal perjalanan berhasil diupdate.', 'data' => $trip]);
+            return response()->json(['message' => 'Data awal perjalanan berhasil diperbarui.', 'data' => $trip], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Data awal perjalanan Gagal diupdate.', 'error' => $e->getMessage()], 422);
+            return response()->json(['message' => 'Gagal memperbarui data awal perjalanan.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -215,53 +222,59 @@ class TripController extends Controller
      */
     public function updateAfterLoading(Request $request, Trip $trip)
     {
+        $validator = Validator::make($request->all(), [
+            'muat_photo'        => 'sometimes|image|max:5120',
+            'delivery_letters'    => 'sometimes|array',
+            'delivery_letters.*'  => 'image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'muat_photo'        => 'sometimes|image|max:5120',
-                'delivery_letters'    => 'sometimes|array',
-                'delivery_letters.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
-            ]);
+            $trip->fill($this->getFieldsToReset($trip, ['muat_photo', 'delivery_letters_initial']));
 
-            $muatPhotoFile = $request->file('muat_photo');
-            $muatPhotoName = $this->generateUniqueFileName($muatPhotoFile);
-            $muatPath = $muatPhotoFile->storeAs('trip_photos/muat_photo', $muatPhotoName, 'public');
-            $initialLetterPaths = [];
-            if ($request->hasFile('delivery_letters')) {
-                foreach ($request->file('delivery_letters') as $file) {
-                    $letterName = $this->generateUniqueFileName($file);
-                    $initialLetterPaths[] = $file->storeAs('trip_photos/delivery_letters', $letterName, 'public');
-                }
+            if ($request->hasFile('muat_photo')) {
+                if ($trip->muat_photo_path) Storage::disk('public')->delete($trip->muat_photo_path);
+
+                $file = $request->file('muat_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/muat_photo', $fileName, 'public');
+
+                $trip->muat_photo_path = $path;
+                $trip->muat_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+
+                $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($path));
             }
-            $deliveryData = ['initial_letters' => $initialLetterPaths];
 
-            $updateData = [
-                'muat_photo_path'      => $muatPath,
-                'delivery_letter_path' => $deliveryData,
-                'status_lokasi'        => 'menuju lokasi bongkar',
-                'status_muatan'        => 'termuat',
-            ];
+            if ($request->hasFile('delivery_letters')) {
+                $deliveryData = $trip->delivery_letter_path ?? ['initial_letters' => [], 'final_letters' => []];
+                if (!empty($deliveryData['initial_letters'])) {
+                    Storage::disk('public')->delete($deliveryData['initial_letters']);
+                }
 
-            // Cek dan dapatkan field yang perlu direset, lalu gabungkan
-            $resets = $this->getFieldsToReset($trip, ['muat_photo', 'delivery_letters_initial']);
-            $updateData = array_merge($updateData, $resets);
-            $trip->update($updateData);
+                $initialPaths = [];
+                foreach ($request->file('delivery_letters') as $file) {
+                    $fileName = $this->generateUniqueFileName($file);
+                    $initialPaths[] = $file->storeAs('trip_photos/delivery_letters', $fileName, 'public');
+                }
+                $deliveryData['initial_letters'] = $initialPaths;
+                $trip->delivery_letter_path = $deliveryData;
+                $trip->delivery_letter_initial_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
 
-            $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'muat_photo', 'Photo Muat', Storage::url($muatPath));
-            if (!empty($initialLetterPaths)) {
-                $count = count($initialLetterPaths);
-                $photoDisplayName = "{$count} file Surat Jalan Awal";
-                $firstPhotoUrl = Storage::url($initialLetterPaths[0]);
-
-                $this->triggerVerificationProcess($trip, 'delivery_letters_initial', $photoDisplayName, $firstPhotoUrl);
+                $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($initialPaths[0]));
             }
 
             DB::commit();
-            return response()->json(['message' => 'Data muatan berhasil diupload.', 'data' => $trip]);
-        } catch (\Throwable $th) {
+            return response()->json(['message' => 'Dokumen setelah muat berhasil diunggah.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Data muatan Gagal diupload.', 'error' => $th->getMessage()], 422);
+            return response()->json(['message' => 'Gagal mengunggah dokumen setelah muat.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -270,43 +283,60 @@ class TripController extends Controller
      */
     public function uploadTripDocuments(Request $request, Trip $trip)
     {
+        $validator = Validator::make($request->all(), [
+            'delivery_order' => 'sometimes|image|max:5120',
+            'segel_photo' => 'sometimes|image|max:5120',
+            'timbangan_kendaraan_photo' => 'sometimes|image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'delivery_order'            => 'sometimes|image|max:5120',
-                'timbangan_kendaraan_photo' => 'sometimes|image|max:5120',
-                'segel_photo'               => 'sometimes|image|max:5120',
-            ]);
+            $trip->fill($this->getFieldsToReset($trip, ['delivery_order', 'segel_photo', 'timbangan_kendaraan_photo']));
 
-            $updateData = [];
+            if ($request->hasFile('delivery_order')) {
+                if ($trip->delivery_order_path) Storage::disk('public')->delete($trip->delivery_order_path);
+                $file = $request->file('delivery_order');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
+                $trip->delivery_order_path = $path;
+                $trip->delivery_order_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'delivery_order', 'Delivery Order', Storage::url($path));
+            }
 
-            $doFile = $request->file('delivery_order');
-            $doFileName = $this->generateUniqueFileName($doFile);
-            $updateData['delivery_order_path'] = $doFile->storeAs('trip_photos/delivery_order', $doFileName, 'public');
+            if ($request->hasFile('segel_photo')) {
+                if ($trip->segel_photo_path) Storage::disk('public')->delete($trip->segel_photo_path);
+                $file = $request->file('segel_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/segel_photo', $fileName, 'public');
+                $trip->segel_photo_path = $path;
+                $trip->segel_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'segel_photo', 'Foto Segel', Storage::url($path));
+            }
 
-            $timbanganFile = $request->file('timbangan_kendaraan_photo');
-            $timbanganFileName = $this->generateUniqueFileName($timbanganFile);
-            $updateData['timbangan_kendaraan_photo_path'] = $timbanganFile->storeAs('trip_photos/timbangan_kendaraan', $timbanganFileName, 'public');
-
-            $segelFile = $request->file('segel_photo');
-            $segelFileName = $this->generateUniqueFileName($segelFile);
-            $updateData['segel_photo_path'] = $segelFile->storeAs('trip_photos/segel_photo', $segelFileName, 'public');
-
-            $resets = $this->getFieldsToReset($trip, ['delivery_order', 'timbangan_kendaraan_photo', 'segel_photo']);
-            $updateData = array_merge($updateData, $resets);
-
-            $trip->update($updateData);
-
-            $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'delivery_order', 'delivery Order', Storage::url($updateData['delivery_order_path']));
-            $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Photo Timbangan Kendaraan', Storage::url($updateData['timbangan_kendaraan_photo_path']));
-            $this->triggerVerificationProcess($trip, 'segel_photo', 'Photo Segel', Storage::url($updateData['segel_photo_path']));
+            if ($request->hasFile('timbangan_kendaraan_photo')) {
+                if ($trip->timbangan_kendaraan_photo_path) Storage::disk('public')->delete($trip->timbangan_kendaraan_photo_path);
+                $file = $request->file('timbangan_kendaraan_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/timbangan_kendaraan', $fileName, 'public');
+                $trip->timbangan_kendaraan_photo_path = $path;
+                $trip->timbangan_kendaraan_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan', Storage::url($path));
+            }
 
             DB::commit();
-            return response()->json(['message' => 'Dokumen tambahan berhasil diupload.', 'data' => $trip]);
-        } catch (\Throwable $th) {
+            return response()->json(['message' => 'Dokumen tambahan berhasil diunggah.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Dokumen tambahan Gagal diupload.', 'error' => $th->getMessage()], 422);
+            return response()->json(['message' => 'Gagal mengunggah dokumen tambahan.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -369,79 +399,77 @@ class TripController extends Controller
      */
     public function updateFinish(Request $request, Trip $trip)
     {
+        $validator = Validator::make($request->all(), [
+            'end_km'            => 'sometimes|integer|gt:' . ($trip->start_km ?? 0),
+            'end_km_photo'      => 'sometimes|image|max:5120',
+            'bongkar_photo'     => 'sometimes|array',
+            'bongkar_photo.*'   => 'image|max:5120',
+            'delivery_letters'  => 'sometimes|array',
+            'delivery_letters.*'=> 'image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
         DB::beginTransaction();
         try {
-            $startKmValue = $trip->start_km;
-            $validated = $request->validate([
-                'bongkar_photo'    => 'sometimes|array',
-                'bongkar_photo.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
-                'end_km_photo'      => 'sometimes|image|max:5120',
-                'end_km'            => 'sometimes|integer|gte:' . $startKmValue,
-                'delivery_letters'    => 'sometimes|array',
-                'delivery_letters.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
-            ]);
+            $validated = $validator->validated();
+            $trip->fill($this->getFieldsToReset($trip, ['end_km_photo', 'bongkar_photo', 'delivery_letters_final']));
 
-            $bongkarPaths = [];
+            if (isset($validated['end_km'])) $trip->end_km = $validated['end_km'];
+
+            if ($request->hasFile('end_km_photo')) {
+                if ($trip->end_km_photo_path) Storage::disk('public')->delete($trip->end_km_photo_path);
+                $file = $request->file('end_km_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/end_km_photo', $fileName, 'public');
+                $trip->end_km_photo_path = $path;
+                $trip->end_km_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'end_km_photo', 'Foto KM Akhir', Storage::url($path));
+            }
+
             if ($request->hasFile('bongkar_photo')) {
+                if ($trip->bongkar_photo_path) {
+                    Storage::disk('public')->delete($trip->bongkar_photo_path);
+                }
+                $bongkarPaths = [];
                 foreach ($request->file('bongkar_photo') as $file) {
-                    $bongkarFileName = $this->generateUniqueFileName($file);
-                    $bongkarPaths[] = $file->storeAs('trip_photos/bongkar_photo', $bongkarFileName, 'public');
+                    $fileName = $this->generateUniqueFileName($file);
+                    $bongkarPaths[] = $file->storeAs('trip_photos/bongkar_photo', $fileName, 'public');
                 }
+                $trip->bongkar_photo_path = $bongkarPaths;
+                $trip->bongkar_photo_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Foto Bongkar', Storage::url($bongkarPaths[0]));
             }
 
-            $endKmFile = $request->file('end_km_photo');
-            $endKmFileName = $this->generateUniqueFileName($endKmFile);
-            $endKmPath = $endKmFile->storeAs('trip_photos/end_km_photo', $endKmFileName, 'public');
-
-            $finalLetterPaths = [];
             if ($request->hasFile('delivery_letters')) {
-                foreach ($request->file('delivery_letters') as $file) {
-                    $letterName = $this->generateUniqueFileName($file);
-                    $finalLetterPaths[] = $file->storeAs('trip_photos/delivery_letters', $letterName, 'public');
+                $deliveryData = $trip->delivery_letter_path ?? ['initial_letters' => [], 'final_letters' => []];
+                if (!empty($deliveryData['final_letters'])) {
+                    Storage::disk('public')->delete($deliveryData['final_letters']);
                 }
-            }
-            $deliveryData = $trip->delivery_letter_path;
-            $deliveryData['final_letters'] = $finalLetterPaths;
-
-            $updateData = [
-                'bongkar_photo_path' => $bongkarPaths,
-                'end_km_photo_path'  => $endKmPath,
-                'end_km'             => $validated['end_km'],
-                'delivery_letter_path' => $deliveryData,
-                'status_trip'         => 'verifikasi gambar',
-                'status_lokasi'      => null,
-                'status_muatan'      => null,
-            ];
-
-            // Cek dan dapatkan field yang perlu direset, lalu gabungkan
-            $resets = $this->getFieldsToReset($trip, ['bongkar_photo', 'end_km_photo', 'delivery_letters_final']);
-            $updateData = array_merge($updateData, $resets);
-
-            $trip->update($updateData);
-
-            $trip->refresh();
-            if (!empty($bongkarPaths)) {
-                $count = count($bongkarPaths);
-                $photoDisplayName = "{$count} file Foto Bongkar";
-                $firstPhotoUrl = Storage::url($bongkarPaths[0]);
-
-                $this->triggerVerificationProcess($trip, 'bongkar_photo', $photoDisplayName, $firstPhotoUrl);
-            }
-            $this->triggerVerificationProcess($trip, 'end_km_photo', 'Photo End KM', Storage::url($endKmPath));
-            if (!empty($finalLetterPaths)) {
-                $count = count($finalLetterPaths);
-                $photoDisplayName = "{$count} file Surat Jalan Akhir";
-                $firstPhotoUrl = Storage::url($finalLetterPaths[0]);
-
-                $this->triggerVerificationProcess($trip, 'delivery_letters_final', $photoDisplayName, $firstPhotoUrl);
+                $finalPaths = [];
+                foreach ($request->file('delivery_letters') as $file) {
+                    $fileName = $this->generateUniqueFileName($file);
+                    $finalPaths[] = $file->storeAs('trip_photos/delivery_letters', $fileName, 'public');
+                }
+                $deliveryData['final_letters'] = $finalPaths;
+                $trip->delivery_letter_path = $deliveryData;
+                $trip->delivery_letter_final_status = 'pending';
+                $trip->status_trip = 'verifikasi gambar';
+                $trip->save();
+                $this->triggerVerificationProcess($trip, 'delivery_letters_final', 'Surat Jalan Akhir', Storage::url($finalPaths[0]));
             }
 
-
+            $trip->save();
             DB::commit();
-            return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
-        } catch (\Throwable $th) {
+            return response()->json(['message' => 'Data akhir perjalanan berhasil diperbarui.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Perjalanan Gagal selesai.', 'error' => $th->getMessage()], 422);
+            return response()->json(['message' => 'Gagal memperbarui data akhir perjalanan.', 'error' => $e->getMessage()], 500);
         }
     }
 
