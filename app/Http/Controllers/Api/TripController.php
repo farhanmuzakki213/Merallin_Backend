@@ -241,7 +241,6 @@ class TripController extends Controller
                 $path = $file->storeAs('trip_photos/muat_photo', $fileName, 'public');
 
                 $trip->muat_photo_path = $path;
-                $trip->save();
 
                 $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($path));
             }
@@ -259,10 +258,12 @@ class TripController extends Controller
                 }
                 $deliveryData['initial_letters'] = $initialPaths;
                 $trip->delivery_letter_path = $deliveryData;
-                $trip->save();
 
                 $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($initialPaths[0]));
             }
+            $trip->status_lokasi = 'menuju lokasi bongkar';
+            $trip->status_muatan = 'termuat';
+            $trip->save();
 
             DB::commit();
             return response()->json(['message' => 'Dokumen setelah muat berhasil diunggah.', 'data' => $trip], 200);
@@ -316,8 +317,6 @@ class TripController extends Controller
                 $trip->timbangan_kendaraan_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan', Storage::url($path));
             }
-            $trip->status_lokasi = 'menuju lokasi bongkar';
-            $trip->status_muatan = 'termuat';
             $trip->save();
 
             DB::commit();
