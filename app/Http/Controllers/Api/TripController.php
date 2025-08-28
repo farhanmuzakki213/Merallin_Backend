@@ -27,7 +27,7 @@ class TripController extends Controller
     /**
      * Memulai alur notifikasi verifikasi: instan ke admin, dan tertunda ke manajer/direksi.
      */
-    private function triggerVerificationProcess(Trip $trip, string $photoType, string $photoName)
+    private function triggerVerificationProcess(Trip $trip, string $photoType, string $photoDisplayName, string $publicPhotoUrl)
     {
         // dd($trip->user->pushSubscriptions);
         if (!$trip->user) {
@@ -35,19 +35,35 @@ class TripController extends Controller
             return;
         }
         try {
-            $admins = User::whereHas('roles', fn($q) => $q->where('name', 'admin'))
-                ->whereHas('pushSubscriptions')
-                ->get();
+            $admins = User::role('admin')->whereHas('pushSubscriptions')->get();
 
-            $message = "Foto '{$photoName}' dari driver {$trip->user->name} perlu diverifikasi.";
-            foreach ($admins as $admin) {
-                // notifyNow mengirim langsung, tidak melalui antrian. Ini pilihan yang baik.
-                $admin->notifyNow(new PhotoVerificationRequired($trip, $message));
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new PhotoVerificationRequired(
+                    $trip,
+                    $photoDisplayName,
+                    $trip->project_name,
+                    $publicPhotoUrl
+                ));
             }
+            $statusField = $photoType . '_status';
 
-            // Menjadwalkan Job Eskalasi
-            EscalateVerificationJob::dispatch($trip, $photoType, 'manager')->delay(now()->addMinutes(1));
-            EscalateVerificationJob::dispatch($trip, $photoType, 'direksi')->delay(now()->addMinutes(2));
+            EscalateVerificationJob::dispatch(
+                $trip,
+                $photoDisplayName,
+                $trip->project_name,
+                $publicPhotoUrl,
+                'manager',
+                $statusField
+            )->delay(now()->addMinutes(1));
+
+            EscalateVerificationJob::dispatch(
+                $trip,
+                $photoDisplayName,
+                $trip->project_name,
+                $publicPhotoUrl,
+                'direksi',
+                $statusField
+            )->delay(now()->addMinutes(2));
         } catch (\Exception $e) {
             Log::error('Gagal memicu proses verifikasi notifikasi: ' . $e->getMessage());
         }
@@ -161,7 +177,7 @@ class TripController extends Controller
             $trip->update($updateData);
 
             $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal');
+            $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal', Storage::url($path));
 
             DB::commit();
             return response()->json(['message' => 'Data awal perjalanan berhasil diupdate.', 'data' => $trip]);
@@ -232,8 +248,8 @@ class TripController extends Controller
             $trip->update($updateData);
 
             $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat');
-            $this->triggerVerificationProcess($trip, 'delivery_letter_initial', 'Surat Jalan Awal');
+            $this->triggerVerificationProcess($trip, 'muat_photo', 'Photo Muat', Storage::url($muatPath));
+            $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($deliveryData));
 
             DB::commit();
             return response()->json(['message' => 'Data muatan berhasil diupload.', 'data' => $trip]);
@@ -276,9 +292,9 @@ class TripController extends Controller
             $trip->update($updateData);
 
             $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'delivery_order', 'Delivery Order');
-            $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan');
-            $this->triggerVerificationProcess($trip, 'segel_photo', 'Foto Segel');
+            $this->triggerVerificationProcess($trip, 'delivery_order', 'delivery Order', Storage::url($updateData['delivery_order_path']));
+            $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Photo Timbangan Kendaraan', Storage::url($updateData['timbangan_kendaraan_photo_path']));
+            $this->triggerVerificationProcess($trip, 'segel_photo', 'Photo Segel', Storage::url($updateData['segel_photo_path']));
 
             DB::commit();
             return response()->json(['message' => 'Dokumen tambahan berhasil diupload.', 'data' => $trip]);
@@ -398,9 +414,9 @@ class TripController extends Controller
             $trip->update($updateData);
 
             $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Foto Bongkar');
-            $this->triggerVerificationProcess($trip, 'end_km_photo', 'Foto KM Akhir');
-            $this->triggerVerificationProcess($trip, 'delivery_letter_final', 'Surat Jalan Akhir');
+            $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Photo Bongkar', Storage::url($bongkarPaths));
+            $this->triggerVerificationProcess($trip, 'end_km_photo', 'Photo End KM', Storage::url($endKmPath));
+            $this->triggerVerificationProcess($trip, 'delivery_letters_final', 'Surat Jalan Akhir', Storage::url($deliveryData));
 
             DB::commit();
             return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);

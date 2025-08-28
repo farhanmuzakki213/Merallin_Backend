@@ -1,25 +1,30 @@
 self.addEventListener('push', function (event) {
-    console.log('✅ Push event received!', event.data.json());
-
     const data = event.data.json();
-    const title = data.title || 'Pemberitahuan Baru';
+    console.log('✅ Push event received!', data);
+
+    const title = data.title || 'Pemberitahuan Baru Merallin'; // Fallback title
     const options = {
-        body: data.body,
-        icon: data.icon || '/favicon.png', // Icon default jika tidak ada
-        badge: data.badge || '/badge.png', // Badge (khusus Android)
-        image: data.image || undefined, // Gambar besar di notifikasi
-        vibrate: [200, 100, 200], // Efek getar
+        body: data.body || 'Ada pembaruan penting untuk Anda.', // Fallback body
+        icon: data.icon || '/images/logo/auth-logo128.svg', // Icon aplikasi
+        badge: data.badge || '/images/logo/auth-logo128.svg', // Badge Android
+        image: data.image || undefined, // Gambar besar, misal thumbnail foto
+        vibrate: data.vibrate || [200, 100, 200, 100, 200], // Pola getar
+        dir: data.dir || 'auto',
+        lang: data.lang || 'id-ID', // Sesuaikan dengan lokasi
+        tag: data.tag || 'general-notification', // Tag untuk grouping/replace
+        renotify: data.renotify || true, // Notifikasi dengan tag sama bisa muncul lagi
         data: {
             url: data.data.url,
-            notification_id: data.data.notification_id
+            notification_id: data.data.notification_id,
+            trip_id: data.data.trip_id,
+            type: data.data.type,
         },
         actions: [
             {
                 action: 'view_trip',
-                title: 'Lihat Detail',
-                icon: data.action_icon || undefined // Icon untuk tombol aksi
+                title: data.action_title || 'Lihat Detail',
+                icon: data.action_icon || undefined
             },
-            // Anda bisa tambahkan aksi lain jika diperlukan
         ]
     };
 
@@ -31,15 +36,12 @@ self.addEventListener('push', function (event) {
 // Tambahkan event listener untuk menangani klik pada notifikasi
 self.addEventListener('notificationclick', function(event) {
     const clickedNotification = event.notification;
-    const primaryAction = event.action; // Ini akan menjadi 'view_trip' jika tombol aksi diklik
+    const primaryAction = event.action;
+    const notificationData = clickedNotification.data;
 
     clickedNotification.close();
 
-    const urlToOpen = clickedNotification.data.url;
-
-    // Menandai notifikasi sebagai dibaca di backend jika memungkinkan
-    // Ini membutuhkan endpoint khusus, atau bisa ditangani saat user membuka URL
-    // fetch('/api/mark-notification-read/' + clickedNotification.data.notification_id, { method: 'POST' });
+    const urlToOpen = notificationData.url || '/dashboard';
 
     event.waitUntil(
         clients.openWindow(urlToOpen)

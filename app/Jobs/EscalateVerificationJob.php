@@ -17,44 +17,46 @@ class EscalateVerificationJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $trip;
-    protected $photoType;
+    protected $photoDisplayName;
+    protected $projectName;
+    protected $publicPhotoUrl;
     protected $roleToNotify;
+    protected $photoTypeStatus; // Menyimpan nama field status foto
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(Trip $trip, string $photoType, string $roleToNotify)
+    public function __construct(Trip $trip, string $photoDisplayName, string $projectName, string $publicPhotoUrl, string $roleToNotify, string $photoTypeStatus)
     {
         $this->trip = $trip;
-        $this->photoType = $photoType;
+        $this->photoDisplayName = $photoDisplayName;
+        $this->projectName = $projectName;
+        $this->publicPhotoUrl = $publicPhotoUrl;
         $this->roleToNotify = $roleToNotify;
+        $this->photoTypeStatus = $photoTypeStatus;
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
         $this->trip->refresh();
-        $statusField = $this->photoType . '_status';
 
-        if ($this->trip->{$statusField} !== 'pending') {
-            return;
+        // Cek apakah status foto masih 'pending'
+        if ($this->trip->{$this->photoTypeStatus} !== 'pending') {
+            return; // Jika sudah diverifikasi, hentikan job
         }
 
-        // Ambil user yang sudah subscribe
-        $usersToNotify = User::whereHas('roles', function ($query) {
-            $query->where('name', $this->roleToNotify);
-        })->whereHas('pushSubscriptions')->get();
+        // Ambil user berdasarkan peran yang sudah subscribe
+        $usersToNotify = User::role($this->roleToNotify)->whereHas('pushSubscriptions')->get();
 
-        if ($usersToNotify->isNotEmpty() && $this->trip->user) {
-            $photoName = ucwords(str_replace('_', ' ', $this->photoType));
-            $message = "ESKALASI: Foto '{$photoName}' dari driver {$this->trip->user->name} belum diverifikasi.";
+        if ($usersToNotify->isNotEmpty()) {
+            // Pesan eskalasi yang lebih jelas
+            $eskalasiTitle = "ESKALASI: Verifikasi Foto Tertunda";
+            $eskalasiMessage = "Foto '{$this->photoDisplayName}' di proyek '{$this->projectName}' belum diverifikasi. Mohon segera ditindaklanjuti.";
 
-            // Gunakan loop foreach agar lebih aman
-            foreach ($usersToNotify as $user) {
-                $user->notify(new PhotoVerificationRequired($this->trip, $message));
-            }
+            Notification::send($usersToNotify, new PhotoVerificationRequired(
+                $this->trip,
+                $eskalasiMessage, // Menggunakan pesan eskalasi
+                $this->projectName,
+                $this->publicPhotoUrl,
+                $eskalasiTitle // Mengirimkan judul eskalasi
+            ));
         }
     }
 }
