@@ -140,7 +140,7 @@ class TripController extends Controller
             $validated = $request->validate([
                 'license_plate'   => 'required|string|max:20',
                 'start_km'        => 'required|integer',
-                'start_km_photo'  => 'required|image|max:5120',
+                'start_km_photo'  => 'sometimes|image|max:5120',
             ]);
 
             $photoFile = $request->file('start_km_photo');
@@ -202,9 +202,9 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'muat_photo'        => 'required|image|max:5120',
-                'delivery_letters'    => 'required|array',
-                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:10240',
+                'muat_photo'        => 'sometimes|image|max:5120',
+                'delivery_letters'    => 'sometimes|array',
+                'delivery_letters.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
             ]);
 
             $muatPhotoFile = $request->file('muat_photo');
@@ -251,9 +251,9 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'delivery_order'            => 'required|image|max:5120',
-                'timbangan_kendaraan_photo' => 'required|image|max:5120',
-                'segel_photo'               => 'required|image|max:5120',
+                'delivery_order'            => 'sometimessometimes|image|max:5120',
+                'timbangan_kendaraan_photo' => 'sometimessometimes|image|max:5120',
+                'segel_photo'               => 'sometimessometimes|image|max:5120',
             ]);
 
             $updateData = [];
@@ -351,12 +351,12 @@ class TripController extends Controller
         try {
             $startKmValue = $trip->start_km;
             $validated = $request->validate([
-                'bongkar_photo'    => 'required|array',
-                'bongkar_photo.*'  => 'required|file|mimes:jpg,png|max:10240',
-                'end_km_photo'      => 'required|image|max:5120',
-                'end_km'            => 'required|integer|gte:' . $startKmValue,
-                'delivery_letters'    => 'required|array',
-                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:10240',
+                'bongkar_photo'    => 'sometimes|array',
+                'bongkar_photo.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
+                'end_km_photo'      => 'sometimes|image|max:5120',
+                'end_km'            => 'sometimes|integer|gte:' . $startKmValue,
+                'delivery_letters'    => 'sometimes|array',
+                'delivery_letters.*'  => 'sometimes|file|mimes:jpg,png|max:10240',
             ]);
 
             $bongkarPaths = [];
