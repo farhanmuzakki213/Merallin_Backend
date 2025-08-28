@@ -154,8 +154,8 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'license_plate'   => 'required|string|max:20',
-                'start_km'        => 'required|integer',
+                'license_plate'   => 'sometimes|string|max:20',
+                'start_km'        => 'sometimes|integer',
                 'start_km_photo'  => 'sometimes|image|max:5120',
             ]);
 
