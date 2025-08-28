@@ -198,7 +198,7 @@ class TripTable extends Component
         $deliveryData = $trip->delivery_letter_path ?? [];
         if (!empty($deliveryData['initial_letters'])) {
             $documentStatuses[] = $trip->delivery_letter_initial_status;
-            $requiredPaths[] = $deliveryData['initial_letters'][0]; // Anggap 1 file wajib
+            $requiredPaths[] = $deliveryData['initial_letters'][0];
         }
         if (!empty($deliveryData['final_letters'])) {
             $documentStatuses[] = $trip->delivery_letter_final_status;

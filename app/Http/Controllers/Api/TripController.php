@@ -177,12 +177,12 @@ class TripController extends Controller
                 $path = $file->storeAs('trip_photos/start_km_photo', $fileName, 'public');
 
                 $trip->start_km_photo_path = $path;
-                $trip->save();
 
                 $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal', Storage::url($path));
-            } else {
-                $trip->save();
             }
+            $trip->status_lokasi = 'menuju lokasi muat';
+            $trip->status_muatan = 'kosong';
+            $trip->save();
 
             DB::commit();
             return response()->json(['message' => 'Data awal perjalanan berhasil diperbarui.', 'data' => $trip], 200);
@@ -296,7 +296,6 @@ class TripController extends Controller
                 $fileName = $this->generateUniqueFileName($file);
                 $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
                 $trip->delivery_order_path = $path;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'delivery_order', 'Delivery Order', Storage::url($path));
             }
 
@@ -306,7 +305,6 @@ class TripController extends Controller
                 $fileName = $this->generateUniqueFileName($file);
                 $path = $file->storeAs('trip_photos/segel_photo', $fileName, 'public');
                 $trip->segel_photo_path = $path;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'segel_photo', 'Foto Segel', Storage::url($path));
             }
 
@@ -316,9 +314,11 @@ class TripController extends Controller
                 $fileName = $this->generateUniqueFileName($file);
                 $path = $file->storeAs('trip_photos/timbangan_kendaraan', $fileName, 'public');
                 $trip->timbangan_kendaraan_photo_path = $path;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan', Storage::url($path));
             }
+            $trip->status_lokasi = 'menuju lokasi bongkar';
+            $trip->status_muatan = 'termuat';
+            $trip->save();
 
             DB::commit();
             return response()->json(['message' => 'Dokumen tambahan berhasil diunggah.', 'data' => $trip], 200);
@@ -393,7 +393,7 @@ class TripController extends Controller
             'bongkar_photo'     => 'sometimes|array',
             'bongkar_photo.*'   => 'image|max:5120',
             'delivery_letters'  => 'sometimes|array',
-            'delivery_letters.*'=> 'image|max:5120',
+            'delivery_letters.*' => 'image|max:5120',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
