@@ -231,10 +231,8 @@ class TripTable extends Component
             }
 
             if ($allRequiredPhotosUploaded) {
-                // Semua dokumen wajib ada DAN semuanya approved
                 $trip->update(['status_trip' => 'selesai']);
             } else {
-                // Sebagian dokumen sudah approved, tapi belum lengkap. Lanjutkan proses.
                 $trip->update(['status_trip' => 'proses']);
             }
         }

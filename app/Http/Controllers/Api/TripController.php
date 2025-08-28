@@ -411,7 +411,6 @@ class TripController extends Controller
                 $fileName = $this->generateUniqueFileName($file);
                 $path = $file->storeAs('trip_photos/end_km_photo', $fileName, 'public');
                 $trip->end_km_photo_path = $path;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'end_km_photo', 'Foto KM Akhir', Storage::url($path));
             }
 
@@ -425,7 +424,6 @@ class TripController extends Controller
                     $bongkarPaths[] = $file->storeAs('trip_photos/bongkar_photo', $fileName, 'public');
                 }
                 $trip->bongkar_photo_path = $bongkarPaths;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Foto Bongkar', Storage::url($bongkarPaths[0]));
             }
 
@@ -441,10 +439,12 @@ class TripController extends Controller
                 }
                 $deliveryData['final_letters'] = $finalPaths;
                 $trip->delivery_letter_path = $deliveryData;
-                $trip->save();
                 $this->triggerVerificationProcess($trip, 'delivery_letters_final', 'Surat Jalan Akhir', Storage::url($finalPaths[0]));
             }
 
+            $trip->status_trip = 'verifikasi gambar';
+            $trip->status_lokasi = null;
+            $trip->status_muatan = null;
             $trip->save();
             DB::commit();
             return response()->json(['message' => 'Data akhir perjalanan berhasil diperbarui.', 'data' => $trip], 200);
