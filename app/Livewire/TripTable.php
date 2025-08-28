@@ -176,37 +176,66 @@ class TripTable extends Component
      */
     private function updateTripStatus(Trip $trip)
     {
-        if ($trip->status_lokasi === null && $trip->status_muatan === null && $trip->status_trip !== 'tersedia') {
+        // 1. Definisikan semua path dokumen yang WAJIB ada untuk trip selesai
+        $requiredPaths = [
+            $trip->start_km_photo_path,
+            $trip->muat_photo_path,
+            $trip->delivery_order_path,
+            $trip->timbangan_kendaraan_photo_path,
+            $trip->segel_photo_path,
+            $trip->end_km_photo_path,
+        ];
 
-            $documentStatuses = [];
+        // 2. Kumpulkan status dari SEMUA dokumen yang mungkin ada
+        $documentStatuses = [];
+        if ($trip->start_km_photo_path) $documentStatuses[] = $trip->start_km_photo_status;
+        if ($trip->muat_photo_path) $documentStatuses[] = $trip->muat_photo_status;
+        if ($trip->delivery_order_path) $documentStatuses[] = $trip->delivery_order_status;
+        if ($trip->timbangan_kendaraan_photo_path) $documentStatuses[] = $trip->timbangan_kendaraan_photo_status;
+        if ($trip->segel_photo_path) $documentStatuses[] = $trip->segel_photo_status;
+        if ($trip->end_km_photo_path) $documentStatuses[] = $trip->end_km_photo_status;
 
-            // Kumpulkan status dari semua dokumen yang relevan
-            if ($trip->start_km_photo_path) $documentStatuses[] = $trip->start_km_photo_status;
-            if ($trip->muat_photo_path) $documentStatuses[] = $trip->muat_photo_status;
-            if ($trip->bongkar_photo_path) $documentStatuses[] = $trip->bongkar_photo_status;
-            if ($trip->end_km_photo_path) $documentStatuses[] = $trip->end_km_photo_status;
-            if ($trip->delivery_order_path) $documentStatuses[] = $trip->delivery_order_status;
-            if ($trip->timbangan_kendaraan_photo_path) $documentStatuses[] = $trip->timbangan_kendaraan_photo_status;
-            if ($trip->segel_photo_path) $documentStatuses[] = $trip->segel_photo_status;
+        $deliveryData = $trip->delivery_letter_path ?? [];
+        if (!empty($deliveryData['initial_letters'])) {
+            $documentStatuses[] = $trip->delivery_letter_initial_status;
+            $requiredPaths[] = $deliveryData['initial_letters'][0]; // Anggap 1 file wajib
+        }
+        if (!empty($deliveryData['final_letters'])) {
+            $documentStatuses[] = $trip->delivery_letter_final_status;
+            $requiredPaths[] = $deliveryData['final_letters'][0]; // Anggap 1 file wajib
+        }
 
-            if (!empty($trip->delivery_letter_path['initial_letters'])) {
-                $documentStatuses[] = $trip->delivery_letter_initial_status;
+        $bongkarData = $trip->bongkar_photo_path ?? [];
+        if (!empty($bongkarData)) {
+            $documentStatuses[] = $trip->bongkar_photo_status;
+            $requiredPaths[] = $bongkarData[0]; // Anggap 1 file wajib
+        }
+
+
+        // 3. Tentukan status trip berdasarkan prioritas
+        if (in_array('rejected', $documentStatuses)) {
+            $trip->update(['status_trip' => 'revisi gambar']);
+
+        } elseif (in_array('pending', $documentStatuses)) {
+            $trip->update(['status_trip' => 'verifikasi gambar']);
+
+        } else {
+            // Jika sampai sini, artinya semua yang diupload sudah 'approved'.
+            // Sekarang cek kelengkapan dokumen.
+            $allRequiredPhotosUploaded = true;
+            foreach ($requiredPaths as $path) {
+                if (empty($path)) {
+                    $allRequiredPhotosUploaded = false;
+                    break;
+                }
             }
-            if (!empty($trip->delivery_letter_path['final_letters'])) {
-                $documentStatuses[] = $trip->delivery_letter_final_status;
-            }
 
-            // Jika tidak ada dokumen sama sekali, jangan ubah status
-            if (empty($documentStatuses)) {
-                return;
-            }
-
-            if (in_array('rejected', $documentStatuses)) {
-                $trip->update(['status_trip' => 'revisi gambar']);
-            } elseif (in_array('pending', $documentStatuses)) {
-                $trip->update(['status_trip' => 'verifikasi gambar']);
-            } else {
+            if ($allRequiredPhotosUploaded) {
+                // Semua dokumen wajib ada DAN semuanya approved
                 $trip->update(['status_trip' => 'selesai']);
+            } else {
+                // Sebagian dokumen sudah approved, tapi belum lengkap. Lanjutkan proses.
+                $trip->update(['status_trip' => 'proses']);
             }
         }
     }
