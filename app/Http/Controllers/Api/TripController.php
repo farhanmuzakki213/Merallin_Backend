@@ -249,7 +249,13 @@ class TripController extends Controller
 
             $trip->refresh();
             $this->triggerVerificationProcess($trip, 'muat_photo', 'Photo Muat', Storage::url($muatPath));
-            $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($deliveryData));
+            if (!empty($initialLetterPaths)) {
+                $count = count($initialLetterPaths);
+                $photoDisplayName = "{$count} file Surat Jalan Awal";
+                $firstPhotoUrl = Storage::url($initialLetterPaths[0]);
+
+                $this->triggerVerificationProcess($trip, 'delivery_letters_initial', $photoDisplayName, $firstPhotoUrl);
+            }
 
             DB::commit();
             return response()->json(['message' => 'Data muatan berhasil diupload.', 'data' => $trip]);
@@ -414,9 +420,22 @@ class TripController extends Controller
             $trip->update($updateData);
 
             $trip->refresh();
-            $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Photo Bongkar', Storage::url($bongkarPaths));
+            if (!empty($bongkarPaths)) {
+                $count = count($bongkarPaths);
+                $photoDisplayName = "{$count} file Foto Bongkar";
+                $firstPhotoUrl = Storage::url($bongkarPaths[0]);
+
+                $this->triggerVerificationProcess($trip, 'bongkar_photo', $photoDisplayName, $firstPhotoUrl);
+            }
             $this->triggerVerificationProcess($trip, 'end_km_photo', 'Photo End KM', Storage::url($endKmPath));
-            $this->triggerVerificationProcess($trip, 'delivery_letters_final', 'Surat Jalan Akhir', Storage::url($deliveryData));
+            if (!empty($finalLetterPaths)) {
+                $count = count($finalLetterPaths);
+                $photoDisplayName = "{$count} file Surat Jalan Akhir";
+                $firstPhotoUrl = Storage::url($finalLetterPaths[0]);
+
+                $this->triggerVerificationProcess($trip, 'delivery_letters_final', $photoDisplayName, $firstPhotoUrl);
+            }
+
 
             DB::commit();
             return response()->json(['message' => 'Perjalanan telah selesai.', 'data' => $trip]);
