@@ -47,8 +47,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
         Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
 
-        Route::post('/trips/{trip}/update-rejected-photo', [TripController::class, 'updateRejectedPhoto']);
-
     });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
     Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);
