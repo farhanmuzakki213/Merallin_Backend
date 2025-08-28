@@ -204,7 +204,7 @@ class TripController extends Controller
             $validated = $request->validate([
                 'muat_photo'        => 'required|image|max:5120',
                 'delivery_letters'    => 'required|array',
-                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
+                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:10240',
             ]);
 
             $muatPhotoFile = $request->file('muat_photo');
@@ -352,11 +352,11 @@ class TripController extends Controller
             $startKmValue = $trip->start_km;
             $validated = $request->validate([
                 'bongkar_photo'    => 'required|array',
-                'bongkar_photo.*'  => 'required|file|mimes:jpg,png|max:5120',
+                'bongkar_photo.*'  => 'required|file|mimes:jpg,png|max:10240',
                 'end_km_photo'      => 'required|image|max:5120',
                 'end_km'            => 'required|integer|gte:' . $startKmValue,
                 'delivery_letters'    => 'required|array',
-                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:5120',
+                'delivery_letters.*'  => 'required|file|mimes:jpg,png|max:10240',
             ]);
 
             $bongkarPaths = [];
