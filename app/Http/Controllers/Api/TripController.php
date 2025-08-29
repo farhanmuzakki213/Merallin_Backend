@@ -466,7 +466,7 @@ class TripController extends Controller
         $driverId = Auth::id();
         $trips = Trip::with('user')
             ->where('user_id', $driverId)
-            ->whereIn('status_trip', ['tersedia', 'proses', 'verifikasi gambar', 'revisi gambar'])
+            ->latest()
             ->get();
 
         return response()->json($trips);
