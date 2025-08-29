@@ -1,0 +1,179 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Jobs\EscalateBbmVerificationJob;
+use App\Models\BbmKendaraan;
+use App\Models\User;
+use App\Models\Vehicle;
+use App\Notifications\BbmPhotoVerificationRequired;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+
+class BbmKendaraanController extends Controller
+{
+    private function triggerVerificationProcess(BbmKendaraan $bbm, string $photoType, string $photoDisplayName, string $publicPhotoUrl)
+    {
+        try {
+            $admins = User::role('admin')->whereHas('pushSubscriptions')->get();
+            $vehicleInfo = $bbm->vehicle->license_plate ?? 'N/A';
+
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new BbmPhotoVerificationRequired(
+                    $bbm,
+                    $photoDisplayName,
+                    $vehicleInfo,
+                    $publicPhotoUrl
+                ));
+            }
+
+            $statusField = $photoType . '_status';
+
+            EscalateBbmVerificationJob::dispatch($bbm, $photoDisplayName, $vehicleInfo, $publicPhotoUrl, 'manager', $statusField)->delay(now()->addMinutes(1));
+            EscalateBbmVerificationJob::dispatch($bbm, $photoDisplayName, $vehicleInfo, $publicPhotoUrl, 'direksi', $statusField)->delay(now()->addMinutes(2));
+
+        } catch (\Exception $e) {
+            Log::error('Gagal memicu proses verifikasi BBM: ' . $e->getMessage());
+        }
+    }
+
+    private function getFieldsToReset(BbmKendaraan $bbm, array $photoTypes): array
+    {
+        $statusMap = [
+            'start_km_photo' => 'start_km_photo_status',
+            'end_km_photo' => 'end_km_photo_status',
+            'nota_pengisian_photo' => 'nota_pengisian_photo_status',
+        ];
+        $updates = [];
+        foreach ($photoTypes as $type) {
+            $statusField = $statusMap[$type] ?? null;
+            if ($statusField && $bbm->{$statusField} === 'rejected') {
+                $updates[$statusField] = 'pending';
+            }
+        }
+        return $updates;
+    }
+
+    private function generateUniqueFileName($file): string
+    {
+        $userName = Str::slug(Auth::user()->name, '-');
+        $timestamp = now()->format('Ymd_His');
+        $uniqueId = uniqid();
+        $extension = $file->getClientOriginalExtension();
+        return "{$userName}_{$timestamp}_{$uniqueId}.{$extension}";
+    }
+
+    public function index()
+    {
+        $history = BbmKendaraan::with('vehicle')
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get();
+        return response()->json($history);
+    }
+
+    public function show(BbmKendaraan $bbmKendaraan)
+    {
+        // Pastikan user hanya bisa melihat data miliknya
+        if ($bbmKendaraan->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        return response()->json($bbmKendaraan->load('vehicle', 'user'));
+    }
+
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vehicle_id' => 'required|exists:vehicles,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        $bbm = BbmKendaraan::create([
+            'user_id' => Auth::id(),
+            'vehicle_id' => $request->vehicle_id,
+        ]);
+
+        return response()->json(['message' => 'Data awal BBM berhasil dibuat.', 'data' => $bbm], 201);
+    }
+
+    public function uploadStartKm(Request $request, BbmKendaraan $bbmKendaraan)
+    {
+        $validator = Validator::make($request->all(), [
+            'start_km_photo' => 'required|image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $bbmKendaraan->fill($this->getFieldsToReset($bbmKendaraan, ['start_km_photo']));
+
+            if ($request->hasFile('start_km_photo')) {
+                if ($bbmKendaraan->start_km_photo_path) Storage::disk('public')->delete($bbmKendaraan->start_km_photo_path);
+
+                $file = $request->file('start_km_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('bbm_photos/start_km', $fileName, 'public');
+                $bbmKendaraan->start_km_photo_path = $path;
+                $bbmKendaraan->save();
+
+                $this->triggerVerificationProcess($bbmKendaraan, 'start_km_photo', 'Foto KM Awal BBM', Storage::url($path));
+            }
+            DB::commit();
+            return response()->json(['message' => 'Foto KM awal berhasil diunggah.', 'data' => $bbmKendaraan], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal mengunggah foto.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function uploadEndKmAndNota(Request $request, BbmKendaraan $bbmKendaraan)
+    {
+        $validator = Validator::make($request->all(), [
+            'end_km_photo' => 'sometimes|image|max:5120',
+            'nota_pengisian_photo' => 'sometimes|image|max:5120',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $bbmKendaraan->fill($this->getFieldsToReset($bbmKendaraan, ['end_km_photo', 'nota_pengisian_photo']));
+
+            if ($request->hasFile('end_km_photo')) {
+                if ($bbmKendaraan->end_km_photo_path) Storage::disk('public')->delete($bbmKendaraan->end_km_photo_path);
+                $file = $request->file('end_km_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('bbm_photos/end_km', $fileName, 'public');
+                $bbmKendaraan->end_km_photo_path = $path;
+                $this->triggerVerificationProcess($bbmKendaraan, 'end_km_photo', 'Foto KM Akhir BBM', Storage::url($path));
+            }
+
+            if ($request->hasFile('nota_pengisian_photo')) {
+                if ($bbmKendaraan->nota_pengisian_photo_path) Storage::disk('public')->delete($bbmKendaraan->nota_pengisian_photo_path);
+                $file = $request->file('nota_pengisian_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('bbm_photos/nota', $fileName, 'public');
+                $bbmKendaraan->nota_pengisian_photo_path = $path;
+                $this->triggerVerificationProcess($bbmKendaraan, 'nota_pengisian_photo', 'Foto Nota BBM', Storage::url($path));
+            }
+            $bbmKendaraan->save();
+            DB::commit();
+            return response()->json(['message' => 'Foto KM akhir dan nota berhasil diunggah.', 'data' => $bbmKendaraan], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal mengunggah foto.', 'error' => $e->getMessage()], 500);
+        }
+    }
+}

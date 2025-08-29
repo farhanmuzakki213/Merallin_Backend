@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BbmKendaraanController;
 use App\Http\Controllers\Api\IzinController;
 use App\Http\Controllers\Api\LemburController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TripController;
+use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -47,8 +49,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
         Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
 
+        Route::get('/vehicles', [VehicleController::class, 'index']);
+
+        Route::get('/bbm_kendaraan', [BbmKendaraanController::class, 'index']);
+        Route::post('/bbm_kendaraan', [BbmKendaraanController::class, 'store']);
+        Route::get('/bbm_kendaraan/{bbmKendaraan}', [BbmKendaraanController::class, 'show']);
+        Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-start-km', [BbmKendaraanController::class, 'uploadStartKm']);
+        Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-end-km-nota', [BbmKendaraanController::class, 'uploadEndKmAndNota']);
     });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
     Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);
-
 });

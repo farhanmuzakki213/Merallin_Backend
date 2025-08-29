@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\NotificationController;
 use App\Livewire\AttendanceTable;
+use App\Livewire\BbmKendaraanTable;
 use App\Livewire\Dashboard;
 use App\Livewire\IzinTable;
 use App\Livewire\LemburTable;
@@ -49,6 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/vehicles/table', VehicleTable::class)->name('vehicles.table');
 
     Route::get('/vehicle-locations/table', VehicleLocationTable::class)->name('vehicleLocations.table');
+
+    Route::get('/bbm-kendaraan/table', BbmKendaraanTable::class)->name('bbm.table');
 });
 
 require __DIR__ . '/auth.php';
