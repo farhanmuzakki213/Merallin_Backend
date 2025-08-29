@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/bbm_kendaraan', [BbmKendaraanController::class, 'store']);
         Route::get('/bbm_kendaraan/{bbmKendaraan}', [BbmKendaraanController::class, 'show']);
         Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-start-km', [BbmKendaraanController::class, 'uploadStartKm']);
+        Route::post('/bbm_kendaraan/{bbmKendaraan}/finish-filling', [BbmKendaraanController::class, 'finishFilling']);
         Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-end-km-nota', [BbmKendaraanController::class, 'uploadEndKmAndNota']);
 
         Route::get('/vehicle-locations', [VehicleLocationController::class, 'index']);

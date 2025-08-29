@@ -24,6 +24,7 @@ class BbmKendaraan extends Model
         'user_id',
         'vehicle_id',
         'status_bbm_kendaraan',
+        'status_pengisian',
         'start_km_photo_path',
         'start_km_photo_status',
         'start_km_photo_verified_by',

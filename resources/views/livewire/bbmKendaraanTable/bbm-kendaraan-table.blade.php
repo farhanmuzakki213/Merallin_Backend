@@ -63,19 +63,27 @@
                                 </p>
                             </div>
                             <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
-                                <p @class([
-                                    'text-theme-xs rounded-full px-2 py-0.5 font-medium whitespace-nowrap',
-                                    'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-500' =>
-                                        $bbm->status_bbm_kendaraan == 'proses',
-                                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500' =>
-                                        $bbm->status_bbm_kendaraan == 'verifikasi gambar',
-                                    'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500' =>
-                                        $bbm->status_bbm_kendaraan == 'revisi gambar',
-                                    'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500' =>
-                                        $bbm->status_bbm_kendaraan == 'selesai',
-                                ])>
-                                    {{ ucfirst($bbm->status_bbm_kendaraan) }}
-                                </p>
+                                @if ($bbm->status_pengisian)
+                                    <div>
+                                        <p class="font-medium text-gray-800 dark:text-white whitespace-nowrap">
+                                            {{ ucfirst($bbm->status_pengisian) }}</p>
+                                        <span class="text-xs text-gray-500">Proses Aktif</span>
+                                    </div>
+                                @else
+                                    <p @class([
+                                        'text-theme-xs rounded-full px-2 py-0.5 font-medium whitespace-nowrap',
+                                        'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-500' =>
+                                            $bbm->status_bbm_kendaraan == 'proses',
+                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-500' =>
+                                            $bbm->status_bbm_kendaraan == 'verifikasi gambar',
+                                        'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-500' =>
+                                            $bbm->status_bbm_kendaraan == 'revisi gambar',
+                                        'bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-500' =>
+                                            $bbm->status_bbm_kendaraan == 'selesai',
+                                    ])>
+                                        {{ ucfirst($bbm->status_bbm_kendaraan) }}
+                                    </p>
+                                @endif
                             </div>
                             <div class="col-span-2 flex items-center border-r p-3 text-xs dark:border-gray-800">
                                 {{ $bbm->created_at->format('d/m/y H:i') }}

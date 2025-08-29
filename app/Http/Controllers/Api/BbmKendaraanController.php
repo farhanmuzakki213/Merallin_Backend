@@ -52,11 +52,16 @@ class BbmKendaraanController extends Controller
             'nota_pengisian_photo' => 'nota_pengisian_photo_status',
         ];
         $updates = [];
+        $shouldResetOverallStatus = false;
         foreach ($photoTypes as $type) {
             $statusField = $statusMap[$type] ?? null;
             if ($statusField && $bbm->{$statusField} === 'rejected') {
                 $updates[$statusField] = 'pending';
+                $shouldResetOverallStatus = true;
             }
+        }
+        if ($shouldResetOverallStatus) {
+            $updates['status_bbm_kendaraan'] = 'verifikasi gambar';
         }
         return $updates;
     }
@@ -100,6 +105,7 @@ class BbmKendaraanController extends Controller
         $bbm = BbmKendaraan::create([
             'user_id' => Auth::id(),
             'vehicle_id' => $request->vehicle_id,
+            'status_pengisian' => 'sedang antri',
         ]);
 
         return response()->json(['message' => 'Data awal BBM berhasil dibuat.', 'data' => $bbm], 201);
@@ -125,16 +131,23 @@ class BbmKendaraanController extends Controller
                 $fileName = $this->generateUniqueFileName($file);
                 $path = $file->storeAs('bbm_photos/start_km', $fileName, 'public');
                 $bbmKendaraan->start_km_photo_path = $path;
-                $bbmKendaraan->save();
 
                 $this->triggerVerificationProcess($bbmKendaraan, 'start_km_photo', 'Foto KM Awal BBM', Storage::url($path));
             }
+            $bbmKendaraan->status_pengisian = 'sedang isi bbm';
+            $bbmKendaraan->save();
             DB::commit();
             return response()->json(['message' => 'Foto KM awal berhasil diunggah.', 'data' => $bbmKendaraan], 200);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Gagal mengunggah foto.', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function finishFilling(BbmKendaraan $bbmKendaraan)
+    {
+        $bbmKendaraan->update(['status_pengisian' => 'selesai isi bbm']);
+        return response()->json(['message' => 'Status pengisian berhasil diperbarui.', 'data' => $bbmKendaraan]);
     }
 
     public function uploadEndKmAndNota(Request $request, BbmKendaraan $bbmKendaraan)
@@ -168,6 +181,8 @@ class BbmKendaraanController extends Controller
                 $bbmKendaraan->nota_pengisian_photo_path = $path;
                 $this->triggerVerificationProcess($bbmKendaraan, 'nota_pengisian_photo', 'Foto Nota BBM', Storage::url($path));
             }
+            $bbmKendaraan->status_pengisian = null;
+            $bbmKendaraan->status_bbm_kendaraan = 'verifikasi gambar';
             $bbmKendaraan->save();
             DB::commit();
             return response()->json(['message' => 'Foto KM akhir dan nota berhasil diunggah.', 'data' => $bbmKendaraan], 200);

@@ -46,7 +46,13 @@ return new class extends Migration
                 'selesai'
             ])->default('proses');
 
-            $table->timestamps(); // Ini akan membuat kolom created_at dan updated_at
+            $table->enum('status_pengisian', [
+                'sedang antri',
+                'sedang isi bbm',
+                'selesai isi bbm',
+            ])->nullable();
+
+            $table->timestamps();
         });
     }
 

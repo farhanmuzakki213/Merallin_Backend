@@ -36,18 +36,19 @@ class BbmKendaraanTable extends Component
             $bbm->nota_pengisian_photo_status
         ]);
 
-        if (empty($statuses)) {
-            $bbm->status_bbm_kendaraan = 'proses';
-            $bbm->save();
-            return;
-        }
-
         if (in_array('rejected', $statuses)) {
             $bbm->status_bbm_kendaraan = 'revisi gambar';
         } elseif (in_array('pending', $statuses)) {
             $bbm->status_bbm_kendaraan = 'verifikasi gambar';
         } else {
-            $bbm->status_bbm_kendaraan = 'selesai';
+            $unapprovedStatuses = array_filter($statuses, function ($status) {
+                return $status !== 'approved';
+            });
+            if (empty($unapprovedStatuses)) {
+                $bbm->status_bbm_kendaraan = 'selesai';
+            } else {
+                $bbm->status_bbm_kendaraan = 'proses';
+            }
         }
         $bbm->save();
     }
