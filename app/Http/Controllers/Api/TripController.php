@@ -465,10 +465,12 @@ class TripController extends Controller
     {
         $driverId = Auth::id();
         $trips = Trip::with('user')
-            ->where('status_trip', 'tersedia')
-            ->orWhere(function ($query) use ($driverId) {
-                $query->where('user_id', $driverId);
+            ->where(function ($query) use ($driverId) {
+                // Grupkan kondisi di dalam satu 'where'
+                $query->where('status_trip', 'tersedia')
+                    ->orWhere('user_id', $driverId);
             })
+            ->whereIn('status_trip', ['tersedia', 'proses', 'verifikasi gambar', 'revisi gambar'])
             ->latest()
             ->get();
 
