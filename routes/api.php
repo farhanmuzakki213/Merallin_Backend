@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\LemburController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TripController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\VehicleLocationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +57,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/bbm_kendaraan/{bbmKendaraan}', [BbmKendaraanController::class, 'show']);
         Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-start-km', [BbmKendaraanController::class, 'uploadStartKm']);
         Route::post('/bbm_kendaraan/{bbmKendaraan}/upload-end-km-nota', [BbmKendaraanController::class, 'uploadEndKmAndNota']);
+
+        Route::get('/vehicle-locations', [VehicleLocationController::class, 'index']);
+        Route::post('/vehicle-locations', [VehicleLocationController::class, 'store']);
+        Route::get('/vehicle-locations/{vehicleLocation}', [VehicleLocationController::class, 'show']);
+        Route::post('/vehicle-locations/{vehicleLocation}/upload-standby-start', [VehicleLocationController::class, 'uploadStandbyAndStartKm']);
+        Route::post('/vehicle-locations/{vehicleLocation}/arrive', [VehicleLocationController::class, 'arriveAtLocation']);
+        Route::post('/vehicle-locations/{vehicleLocation}/upload-end', [VehicleLocationController::class, 'uploadEndKm']);
     });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
     Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);

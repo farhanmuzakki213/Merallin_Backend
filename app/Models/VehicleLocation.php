@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class VehicleLocation extends Model
 {
@@ -12,49 +14,113 @@ class VehicleLocation extends Model
 
     /**
      * The attributes that are mass assignable.
-     *
      * @var array
      */
     protected $fillable = [
-        'vehicle_id',
         'user_id',
-        'location',
-        'event_type',
-        'trip_id',
-        'remarks',
-        'reported_at',
+        'vehicle_id',
+        'keterangan',
+        'start_location',
+        'standby_photo_path',
+        'standby_photo_status',
+        'standby_photo_verified_by',
+        'standby_photo_verified_at',
+        'standby_photo_rejection_reason',
+        'start_km_photo_path',
+        'start_km_photo_status',
+        'start_km_photo_verified_by',
+        'start_km_photo_verified_at',
+        'start_km_photo_rejection_reason',
+        'end_km_photo_path',
+        'end_km_photo_status',
+        'end_km_photo_verified_by',
+        'end_km_photo_verified_at',
+        'end_km_photo_rejection_reason',
+        'end_location',
+        'status_vehicle_location',
+        'status_lokasi',
     ];
 
     /**
-     * The attributes that should be cast.
-     *
+     * The attributes that should be cast to native types.
      * @var array
      */
     protected $casts = [
-        'reported_at' => 'datetime',
+        'start_location' => 'array',
+        'end_location' => 'array',
+        'standby_photo_verified_at' => 'datetime',
+        'start_km_photo_verified_at' => 'datetime',
+        'end_km_photo_verified_at' => 'datetime',
     ];
 
     /**
-     * Relasi ke model Vehicle.
+     * The accessors to append to the model's array form.
+     * @var array
      */
+    protected $appends = [
+        'full_standby_photo_url',
+        'full_start_km_photo_url',
+        'full_end_km_photo_url',
+        'start_location_map_url',
+        'end_location_map_url',
+    ];
+
+    // --- RELATIONS ---
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    /**
-     * Relasi ke model User (Driver).
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Relasi ke model Trip.
-     */
-    public function trip(): BelongsTo
+    // --- ACCESSORS for photo URLs ---
+    protected function fullStandbyPhotoUrl(): Attribute
     {
-        return $this->belongsTo(Trip::class);
+        return Attribute::make(get: fn () => $this->standby_photo_path ? Storage::url($this->standby_photo_path) : null);
+    }
+
+    protected function fullStartKmPhotoUrl(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->start_km_photo_path ? Storage::url($this->start_km_photo_path) : null);
+    }
+
+    protected function fullEndKmPhotoUrl(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->end_km_photo_path ? Storage::url($this->end_km_photo_path) : null);
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL Google Maps dari lokasi awal.
+     */
+    protected function startLocationMapUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $location = $this->start_location;
+                if (!empty($location['latitude']) && !empty($location['longitude'])) {
+                    return "https://www.google.com/maps/search/?api=1&query={$location['latitude']},{$location['longitude']}";
+                }
+                return null;
+            }
+        );
+    }
+
+    /**
+     * Accessor untuk mendapatkan URL Google Maps dari lokasi akhir.
+     */
+    protected function endLocationMapUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $location = $this->end_location;
+                if (!empty($location['latitude']) && !empty($location['longitude'])) {
+                    return "https://www.google.com/maps/search/?api=1&query={$location['latitude']},{$location['longitude']}";
+                }
+                return null;
+            }
+        );
     }
 }
