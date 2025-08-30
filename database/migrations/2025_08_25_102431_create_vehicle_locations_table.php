@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('vehicle_id')->constrained()->onDelete('cascade');
+            $table->foreignId('trip_id')->nullable()->constrained('trips')->onDelete('set null');
             $table->text('keterangan')->nullable();
 
             $table->text('start_location')->nullable();

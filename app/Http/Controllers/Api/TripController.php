@@ -152,8 +152,8 @@ class TripController extends Controller
     public function updateStart(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
-            'vehicle_id'      => 'sometimes|integer|exists:vehicles,id',
-            'start_km'        => 'sometimes|integer',
+            'vehicle_id'      => 'required|integer|exists:vehicles,id',
+            'start_km'        => 'required|integer',
             'start_km_photo'  => 'sometimes|image|max:5120',
         ]);
         if ($validator->fails()) {

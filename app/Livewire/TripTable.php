@@ -14,6 +14,7 @@ use App\Exports\TripUserReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\VehicleLocation;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -63,6 +64,29 @@ class TripTable extends Component
     public $galleryTitle = '';
     public $galleryPhotos = [];
     public $currentGalleryIndex = 0;
+
+    /**
+     * Mengekstrak koordinat (latitude, longitude) dari URL Google Maps.
+     *
+     * @param string|null $url
+     * @return array|null
+     */
+    private function getCoordinatesFromGoogleMapsUrl(?string $url): ?array
+    {
+        if (!$url) {
+            return null;
+        }
+
+        // Regex untuk mencari pola @latitude,longitude dalam URL
+        if (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $url, $matches)) {
+            return [
+                'latitude' => $matches[1],
+                'longitude' => $matches[2],
+            ];
+        }
+
+        return null;
+    }
 
     /**
      * Fungsi untuk mengambil data dan men-trigger download Excel.
@@ -185,76 +209,86 @@ class TripTable extends Component
      */
     private function updateTripStatus(Trip $trip)
     {
-        // 1. Definisikan semua path dokumen yang WAJIB ada untuk trip selesai
-        $requiredPaths = [
-            $trip->start_km_photo_path,
-            $trip->km_muat_photo_path,
-            $trip->kedatangan_muat_photo_path,
-            $trip->delivery_order_photo_path,
-            $trip->muat_photo_path,
-            $trip->delivery_letter_path,
-            $trip->timbangan_kendaraan_photo_path,
-            $trip->segel_photo_path,
-            $trip->end_km_photo_path,
-            $trip->kedatangan_bongkar_photo_path,
-            $trip->bongkar_photo_path,
+        // 1. Definisikan semua jenis foto yang WAJIB ada agar trip dianggap 'selesai'
+        $mandatoryPhotos = [
+            'start_km_photo', 'km_muat_photo', 'kedatangan_muat_photo',
+            'delivery_order_photo', 'muat_photo', 'timbangan_kendaraan_photo',
+            'segel_photo', 'end_km_photo', 'kedatangan_bongkar_photo',
+            'bongkar_photo', 'delivery_letter_initial', 'delivery_letter_final'
         ];
 
-        // 2. Kumpulkan status dari SEMUA dokumen yang mungkin ada
-        $documentStatuses = [];
-        if ($trip->start_km_photo_path) $documentStatuses[] = $trip->start_km_photo_status;
-        if ($trip->km_muat_photo_path) $documentStatuses[] = $trip->km_muat_photo_status;
-        if ($trip->kedatangan_muat_photo_path) $documentStatuses[] = $trip->kedatangan_muat_photo_status;
-        if ($trip->delivery_order_photo_path) $documentStatuses[] = $trip->delivery_order_photo_status;
-        if ($trip->timbangan_kendaraan_photo_path) $documentStatuses[] = $trip->timbangan_kendaraan_photo_status;
-        if ($trip->segel_photo_path) $documentStatuses[] = $trip->segel_photo_status;
-        if ($trip->end_km_photo_path) $documentStatuses[] = $trip->end_km_photo_status;
-        if ($trip->kedatangan_bongkar_photo_path) $documentStatuses[] = $trip->kedatangan_bongkar_photo_status;
+        $statuses = [];
+        $allMandatoryPhotosUploaded = true;
 
-        $deliveryData = $trip->delivery_letter_path ?? [];
-        if (!empty($deliveryData['initial_letters'])) {
-            $documentStatuses[] = $trip->delivery_letter_initial_status;
-            $requiredPaths[] = $deliveryData['initial_letters'][0];
-        }
-        if (!empty($deliveryData['final_letters'])) {
-            $documentStatuses[] = $trip->delivery_letter_final_status;
-            $requiredPaths[] = $deliveryData['final_letters'][0];
-        }
+        foreach ($mandatoryPhotos as $type) {
+            $pathField = ($type === 'delivery_letter_initial' || $type === 'delivery_letter_final')
+                ? 'delivery_letter_path'
+                : "{$type}_path";
+            $statusField = "{$type}_status";
 
-        $bongkarData = $trip->bongkar_photo_path ?? [];
-        if (!empty($bongkarData)) {
-            $documentStatuses[] = $trip->bongkar_photo_status;
-            $requiredPaths[] = $bongkarData[0];
-        }
-
-        $muatData = $trip->muat_photo_path ?? [];
-        if (!empty($muatData)) {
-            $documentStatuses[] = $trip->muat_photo_status;
-            $requiredPaths[] = $muatData[0];
-        }
-
-
-        // 3. Tentukan status trip berdasarkan prioritas
-        if (in_array('rejected', $documentStatuses)) {
-            $trip->update(['status_trip' => 'revisi gambar']);
-        } elseif (in_array('pending', $documentStatuses)) {
-            $trip->update(['status_trip' => 'verifikasi gambar']);
-        } else {
-            // Jika sampai sini, artinya semua yang diupload sudah 'approved'.
-            // Sekarang cek kelengkapan dokumen.
-            $allRequiredPhotosUploaded = true;
-            foreach ($requiredPaths as $path) {
-                if (empty($path)) {
-                    $allRequiredPhotosUploaded = false;
-                    break;
-                }
-            }
-
-            if ($allRequiredPhotosUploaded) {
-                $trip->update(['status_trip' => 'selesai']);
+            $isUploaded = false;
+            if ($type === 'delivery_letter_initial') {
+                $isUploaded = !empty($trip->delivery_letter_path['initial_letters'] ?? null);
+            } elseif ($type === 'delivery_letter_final') {
+                $isUploaded = !empty($trip->delivery_letter_path['final_letters'] ?? null);
             } else {
-                $trip->update(['status_trip' => 'proses']);
+                $isUploaded = !empty($trip->{$pathField});
             }
+
+            if ($isUploaded) {
+                $statuses[] = $trip->{$statusField};
+            } else {
+                // Jika ada foto wajib yang belum diunggah, trip tidak bisa 'selesai'.
+                $allMandatoryPhotosUploaded = false;
+            }
+        }
+
+        // 2. Tentukan status trip baru berdasarkan prioritas
+        $newStatus = $trip->status_trip; // Ambil status saat ini sebagai default
+        if (in_array('rejected', $statuses)) {
+            $newStatus = 'revisi gambar';
+        } elseif (!$allMandatoryPhotosUploaded) {
+            // Jika dokumen wajib belum lengkap, statusnya pasti 'proses' (kecuali ada yg direject)
+            $newStatus = 'proses';
+        } elseif (in_array('pending', $statuses)) {
+            // Jika sudah lengkap tapi ada yg pending, statusnya 'verifikasi gambar'
+            $newStatus = 'verifikasi gambar';
+        } else {
+            // Jika semua sudah diunggah, lengkap, dan tidak ada yang pending/rejected, maka 'selesai'
+            $newStatus = 'selesai';
+        }
+
+        // 3. Update status trip jika ada perubahan
+        if ($trip->status_trip !== $newStatus) {
+            $trip->update(['status_trip' => $newStatus]);
+        }
+
+        if ($newStatus === 'selesai' && !VehicleLocation::where('trip_id', $trip->id)->exists()) {
+            $originCoords = $this->getCoordinatesFromGoogleMapsUrl(data_get($trip->origin, 'link'));
+            $destinationCoords = $this->getCoordinatesFromGoogleMapsUrl(data_get($trip->destination, 'link'));
+
+            VehicleLocation::create([
+                'user_id' => $trip->user_id,
+                'vehicle_id' => $trip->vehicle_id,
+                'trip_id' => $trip->id,
+                'keterangan' => "Tugas Trip: {$trip->project_name} (ID: {$trip->id})",
+                'start_location' => $originCoords ? "{$originCoords['latitude']},{$originCoords['longitude']}" : null,
+                'end_location' => $destinationCoords ? "{$destinationCoords['latitude']},{$destinationCoords['longitude']}" : null,
+                'standby_photo_path' => $trip->kedatangan_muat_photo_path,
+                'standby_photo_status' => $trip->kedatangan_muat_photo_status,
+                'standby_photo_verified_by' => $trip->kedatangan_muat_photo_verified_by,
+                'standby_photo_verified_at' => $trip->kedatangan_muat_photo_verified_at,
+                'start_km_photo_path' => $trip->start_km_photo_path,
+                'start_km_photo_status' => $trip->start_km_photo_status,
+                'start_km_photo_verified_by' => $trip->start_km_photo_verified_by,
+                'start_km_photo_verified_at' => $trip->start_km_photo_verified_at,
+                'end_km_photo_path' => $trip->end_km_photo_path,
+                'end_km_photo_status' => $trip->end_km_photo_status,
+                'end_km_photo_verified_by' => $trip->end_km_photo_verified_by,
+                'end_km_photo_verified_at' => $trip->end_km_photo_verified_at,
+                'status_vehicle_location' => 'selesai',
+                'status_lokasi' => null,
+            ]);
         }
     }
 

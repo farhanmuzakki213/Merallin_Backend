@@ -105,6 +105,10 @@ class Trip extends Model
      * @var array
      */
     protected $casts = [
+        'user_id' => 'integer',
+        'vehicle_id' => 'integer',
+        'start_km' => 'integer',
+        'end_km' => 'integer',
         'origin' => 'array',
         'destination' => 'array',
         'delivery_letter_path' => 'array',

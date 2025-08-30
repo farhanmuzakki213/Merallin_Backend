@@ -19,6 +19,7 @@ class VehicleLocation extends Model
     protected $fillable = [
         'user_id',
         'vehicle_id',
+        'trip_id',
         'keterangan',
         'start_location',
         'standby_photo_path',
@@ -74,6 +75,11 @@ class VehicleLocation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function trip(): BelongsTo
+    {
+        return $this->belongsTo(Trip::class);
     }
 
     // --- ACCESSORS for photo URLs ---
