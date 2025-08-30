@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Exports\TripUserReportExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -32,7 +33,13 @@ class TripTable extends Component
 
     public $showModal = false;
     public $tripId;
-    public $projectName, $origin, $destination;
+    public $projectName;
+    public $slot_time;
+    public $jenis_berat;
+    public $origin_address;
+    public $origin_link;
+    public $destination_address;
+    public $destination_link;
 
     public $showImageModal = false;
     public $imageUrl;
@@ -52,9 +59,10 @@ class TripTable extends Component
     public $rejectionPhotoType;
     public $rejectionReason = '';
 
-    public $showBongkarPhotoModal = false;
-    public $bongkarPhotos = [];
-    public $currentBongkarPhotoIndex = 0;
+    public $showGalleryModal = false;
+    public $galleryTitle = '';
+    public $galleryPhotos = [];
+    public $currentGalleryIndex = 0;
 
     /**
      * Fungsi untuk mengambil data dan men-trigger download Excel.
@@ -101,43 +109,47 @@ class TripTable extends Component
         return Excel::download(new TripUserReportExport($dataForExport), $fileName);
     }
 
-    /**
-     * Membuka modal galeri untuk foto bongkar.
-     */
-    public function openBongkarPhotoModal($tripId)
+    public function openGalleryModal($tripId, $photoType)
     {
         $trip = Trip::findOrFail($tripId);
-        $this->bongkarPhotos = $trip->bongkar_photo_path ?? [];
-        $this->currentBongkarPhotoIndex = 0;
-        $this->showBongkarPhotoModal = true;
+        $photos = [];
+        $title = '';
+
+        switch ($photoType) {
+            case 'muat':
+                $photos = $trip->muat_photo_path ?? [];
+                $title = 'Galeri Foto Muat';
+                break;
+            case 'bongkar':
+                $photos = $trip->bongkar_photo_path ?? [];
+                $title = 'Galeri Foto Bongkar';
+                break;
+        }
+
+        $this->galleryPhotos = $photos;
+        $this->galleryTitle = $title;
+        $this->currentGalleryIndex = 0;
+        $this->showGalleryModal = true;
     }
 
-    /**
-     * Menutup modal galeri untuk foto bongkar.
-     */
-    public function closeBongkarPhotoModal()
+    public function closeGalleryModal()
     {
-        $this->showBongkarPhotoModal = false;
-        $this->bongkarPhotos = [];
+        $this->showGalleryModal = false;
+        $this->galleryTitle = '';
+        $this->galleryPhotos = [];
     }
 
-    /**
-     * Menampilkan foto berikutnya di galeri.
-     */
-    public function nextBongkarPhoto()
+    public function nextGalleryPhoto()
     {
-        if ($this->currentBongkarPhotoIndex < count($this->bongkarPhotos) - 1) {
-            $this->currentBongkarPhotoIndex++;
+        if ($this->currentGalleryIndex < count($this->galleryPhotos) - 1) {
+            $this->currentGalleryIndex++;
         }
     }
 
-    /**
-     * Menampilkan foto sebelumnya di galeri.
-     */
-    public function previousBongkarPhoto()
+    public function previousGalleryPhoto()
     {
-        if ($this->currentBongkarPhotoIndex > 0) {
-            $this->currentBongkarPhotoIndex--;
+        if ($this->currentGalleryIndex > 0) {
+            $this->currentGalleryIndex--;
         }
     }
 
@@ -146,10 +158,7 @@ class TripTable extends Component
      */
     public function mount()
     {
-        // Asumsi driver memiliki role 'driver'. Sesuaikan jika perlu.
-        $this->drivers = User::whereHas('roles', function ($query) {
-            $query->where('name', 'driver');
-        })->get();
+        $this->drivers = User::role('driver')->get();
     }
 
     public function approvePhoto($tripId, $photoType)
@@ -179,21 +188,28 @@ class TripTable extends Component
         // 1. Definisikan semua path dokumen yang WAJIB ada untuk trip selesai
         $requiredPaths = [
             $trip->start_km_photo_path,
+            $trip->km_muat_photo_path,
+            $trip->kedatangan_muat_photo_path,
+            $trip->delivery_order_photo_path,
             $trip->muat_photo_path,
-            $trip->delivery_order_path,
+            $trip->delivery_letter_path,
             $trip->timbangan_kendaraan_photo_path,
             $trip->segel_photo_path,
             $trip->end_km_photo_path,
+            $trip->kedatangan_bongkar_photo_path,
+            $trip->bongkar_photo_path,
         ];
 
         // 2. Kumpulkan status dari SEMUA dokumen yang mungkin ada
         $documentStatuses = [];
         if ($trip->start_km_photo_path) $documentStatuses[] = $trip->start_km_photo_status;
-        if ($trip->muat_photo_path) $documentStatuses[] = $trip->muat_photo_status;
-        if ($trip->delivery_order_path) $documentStatuses[] = $trip->delivery_order_status;
+        if ($trip->km_muat_photo_path) $documentStatuses[] = $trip->km_muat_photo_status;
+        if ($trip->kedatangan_muat_photo_path) $documentStatuses[] = $trip->kedatangan_muat_photo_status;
+        if ($trip->delivery_order_photo_path) $documentStatuses[] = $trip->delivery_order_photo_status;
         if ($trip->timbangan_kendaraan_photo_path) $documentStatuses[] = $trip->timbangan_kendaraan_photo_status;
         if ($trip->segel_photo_path) $documentStatuses[] = $trip->segel_photo_status;
         if ($trip->end_km_photo_path) $documentStatuses[] = $trip->end_km_photo_status;
+        if ($trip->kedatangan_bongkar_photo_path) $documentStatuses[] = $trip->kedatangan_bongkar_photo_status;
 
         $deliveryData = $trip->delivery_letter_path ?? [];
         if (!empty($deliveryData['initial_letters'])) {
@@ -202,23 +218,27 @@ class TripTable extends Component
         }
         if (!empty($deliveryData['final_letters'])) {
             $documentStatuses[] = $trip->delivery_letter_final_status;
-            $requiredPaths[] = $deliveryData['final_letters'][0]; // Anggap 1 file wajib
+            $requiredPaths[] = $deliveryData['final_letters'][0];
         }
 
         $bongkarData = $trip->bongkar_photo_path ?? [];
         if (!empty($bongkarData)) {
             $documentStatuses[] = $trip->bongkar_photo_status;
-            $requiredPaths[] = $bongkarData[0]; // Anggap 1 file wajib
+            $requiredPaths[] = $bongkarData[0];
+        }
+
+        $muatData = $trip->muat_photo_path ?? [];
+        if (!empty($muatData)) {
+            $documentStatuses[] = $trip->muat_photo_status;
+            $requiredPaths[] = $muatData[0];
         }
 
 
         // 3. Tentukan status trip berdasarkan prioritas
         if (in_array('rejected', $documentStatuses)) {
             $trip->update(['status_trip' => 'revisi gambar']);
-
         } elseif (in_array('pending', $documentStatuses)) {
             $trip->update(['status_trip' => 'verifikasi gambar']);
-
         } else {
             // Jika sampai sini, artinya semua yang diupload sudah 'approved'.
             // Sekarang cek kelengkapan dokumen.
@@ -256,23 +276,25 @@ class TripTable extends Component
     {
         $this->validate(['rejectionReason' => 'required|string|min:10']);
 
-        $trip = Trip::findOrFail($this->rejectionTripId);
-        $photoType = $this->rejectionPhotoType;
-        $statusField = "{$photoType}_status";
-        if ($trip->{$statusField} !== 'pending') {
-            session()->flash('error', 'Gagal: Gambar ini sudah diverifikasi oleh admin lain.');
-            $this->closeRejectionModal();
-            return;
-        }
-        $trip->update([
-            "{$this->rejectionPhotoType}_status" => 'rejected',
-            "{$this->rejectionPhotoType}_verified_by" => Auth::id(),
-            "{$this->rejectionPhotoType}_verified_at" => now(),
-            "{$this->rejectionPhotoType}_rejection_reason" => $this->rejectionReason,
-        ]);
+        DB::transaction(function () {
+            $trip = Trip::findOrFail($this->rejectionTripId);
+            $photoType = $this->rejectionPhotoType;
+            $statusField = "{$photoType}_status";
+            if ($trip->{$statusField} !== 'pending') {
+                session()->flash('error', 'Gagal: Gambar ini sudah diverifikasi oleh admin lain.');
+                $this->closeRejectionModal();
+                return;
+            }
+            $trip->update([
+                "{$this->rejectionPhotoType}_status" => 'rejected',
+                "{$this->rejectionPhotoType}_verified_by" => Auth::id(),
+                "{$this->rejectionPhotoType}_verified_at" => now(),
+                "{$this->rejectionPhotoType}_rejection_reason" => $this->rejectionReason,
+            ]);
 
-        $this->updateTripStatus($trip->fresh());
-        session()->flash('message', 'Photo has been rejected with a reason.');
+            $this->updateTripStatus($trip->fresh());
+            session()->flash('message', 'Photo has been rejected with a reason.');
+        });
         $this->closeRejectionModal();
     }
 
@@ -293,10 +315,15 @@ class TripTable extends Component
     {
         $this->tripId = null;
         $this->projectName = '';
-        $this->origin = '';
-        $this->destination = '';
         $this->userId = null; // Reset driver
         $this->jenisTrip = 'muatan perusahan'; // Reset jenis trip
+        $this->slot_time = null;
+        $this->jenis_berat = 'CDDL';
+
+        $this->origin_address = '';
+        $this->origin_link = '';
+        $this->destination_address = '';
+        $this->destination_link = '';
         $this->resetErrorBag();
     }
 
@@ -379,8 +406,6 @@ class TripTable extends Component
     {
         $this->validate([
             'projectName' => 'required|string|max:255',
-            'origin' => 'required|string|max:255',
-            'destination' => 'required|string|max:255',
             'userId' => [
                 'required',
                 'exists:users,id',
@@ -389,16 +414,31 @@ class TripTable extends Component
                 })->ignore($this->tripId),
             ],
             'jenisTrip' => 'required|in:muatan driver,muatan perusahan',
+            'slot_time' => 'required|date_format:H:i',
+            'jenis_berat' => 'required|in:CDDL,CDDS,CDE',
+
+            'origin_address' => 'required|string|max:255',
+            'origin_link' => 'required|url',
+            'destination_address' => 'required|string|max:255',
+            'destination_link' => 'required|url',
         ], [
             'userId.unique' => 'The selected driver already has an active trip in process.',
         ]);
 
         Trip::updateOrCreate(['id' => $this->tripId], [
             'project_name' => $this->projectName,
-            'origin' => $this->origin,
-            'destination' => $this->destination,
             'user_id' => $this->userId,
             'jenis_trip' => $this->jenisTrip,
+            'slot_time' => $this->slot_time,
+            'jenis_berat' => $this->jenis_berat,
+            'origin' => [
+                'address' => $this->origin_address,
+                'link' => $this->origin_link,
+            ],
+            'destination' => [
+                'address' => $this->destination_address,
+                'link' => $this->destination_link,
+            ],
             'status_trip' => $this->tripId ? Trip::find($this->tripId)->status_trip : 'tersedia',
         ]);
 
@@ -418,24 +458,38 @@ class TripTable extends Component
 
         $this->tripId = $id;
         $this->projectName = $trip->project_name;
-        $this->origin = $trip->origin;
-        $this->destination = $trip->destination;
         $this->userId = $trip->user_id; // Load driver
         $this->jenisTrip = $trip->jenis_trip; // Load jenis trip
+        $this->slot_time = $trip->slot_time;
+        $this->jenis_berat = $trip->getAttribute('jenis_berat');
+
+        $origin = is_string($trip->origin) ? json_decode($trip->origin, true) : $trip->origin;
+        $destination = is_string($trip->destination) ? json_decode($trip->destination, true) : $trip->destination;
+
+        if (is_array($origin)) {
+            $this->origin_address = $origin['address'] ?? '';
+            $this->origin_link = $origin['link'] ?? '';
+        }
+
+        if (is_array($destination)) {
+            $this->destination_address = $destination['address'] ?? '';
+            $this->destination_link = $destination['link'] ?? '';
+        }
         $this->openModal();
     }
 
     public function delete($id)
     {
         $trip = Trip::find($id);
-        if ($trip) {
-            $trip->delete();
-            if ($trip->status_trip !== 'tersedia') {
-                session()->flash('error', 'You can only delete trips that are available.');
-                return;
-            }
-            session()->flash('message', 'Trip Deleted Successfully.');
+        if (!$trip) return;
+
+        if ($trip->status_trip !== 'tersedia') {
+            session()->flash('error', 'Hanya bisa menghapus trip yang berstatus "Tersedia".');
+            return;
         }
+
+        $trip->delete();
+        session()->flash('message', 'Trip Berhasil Dihapus.');
     }
 
     public function openImageModal($url)
@@ -452,7 +506,7 @@ class TripTable extends Component
 
     public function render()
     {
-        $trips = Trip::with('user')
+        $trips = Trip::with('user', 'vehicle')
             ->where(function ($query) {
                 $query->where('project_name', 'like', '%' . $this->search . '%')
                     ->orWhere('origin', 'like', '%' . $this->search . '%')
@@ -464,15 +518,17 @@ class TripTable extends Component
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
-        $detailTripsQuery = Trip::with('user')
+        $detailTripsQuery = Trip::with('user', 'vehicle')
             ->where(function ($query) {
                 $query->where('project_name', 'like', '%' . $this->detailSearch . '%')
                     ->orWhere('origin', 'like', '%' . $this->detailSearch . '%')
                     ->orWhere('destination', 'like', '%' . $this->detailSearch . '%')
-                    ->orWhere('license_plate', 'like', '%' . $this->detailSearch . '%')
                     ->orWhere('status_trip', 'like', '%' . $this->detailSearch . '%')
                     ->orWhereHas('user', function ($q) {
                         $q->where('name', 'like', '%' . $this->detailSearch . '%');
+                    })
+                    ->orWhereHas('vehicle', function ($q) {
+                        $q->where('license_plate', 'like', '%' . $this->detailSearch . '%');
                     });
             })->whereIn('status_trip', ['proses', 'selesai', 'revisi gambar', 'verifikasi gambar']);
 

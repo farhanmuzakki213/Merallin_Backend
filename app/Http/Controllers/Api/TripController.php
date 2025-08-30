@@ -82,15 +82,18 @@ class TripController extends Controller
     {
         // Peta jenis foto ke kolom statusnya di database
         $statusMap = [
-            'start_km_photo'            => 'start_km_photo_status',
-            'muat_photo'                => 'muat_photo_status',
-            'bongkar_photo'             => 'bongkar_photo_status',
-            'end_km_photo'              => 'end_km_photo_status',
-            'delivery_order'            => 'delivery_order_status',
-            'timbangan_kendaraan_photo' => 'timbangan_kendaraan_photo_status',
-            'segel_photo'               => 'segel_photo_status',
+            'start_km_photo' => 'start_km_photo_status',
+            'km_muat_photo' => 'km_muat_photo_status',
+            'kedatangan_muat_photo' => 'kedatangan_muat_photo_status',
+            'delivery_order_photo' => 'delivery_order_photo_status',
+            'muat_photo' => 'muat_photo_status',
             'delivery_letters_initial'  => 'delivery_letter_initial_status',
-            'delivery_letters_final'    => 'delivery_letter_final_status',
+            'timbangan_kendaraan_photo' => 'timbangan_kendaraan_photo_status',
+            'segel_photo' => 'segel_photo_status',
+            'end_km_photo' => 'end_km_photo_status',
+            'kedatangan_bongkar_photo' => 'kedatangan_bongkar_photo_status',
+            'bongkar_photo' => 'bongkar_photo_status',
+            'delivery_letters_final' => 'delivery_letter_final_status',
         ];
 
         $updates = [];
@@ -98,16 +101,12 @@ class TripController extends Controller
 
         foreach ($photoTypes as $type) {
             $statusField = $statusMap[$type] ?? null;
-            // Jika status field ada dan nilainya 'rejected'
             if ($statusField && $trip->{$statusField} === 'rejected') {
-                // Tandai bahwa status foto ini perlu diubah ke 'pending'
                 $updates[$statusField] = 'pending';
                 $tripStatusShouldBeReset = true;
             }
         }
 
-        // Jika ada setidaknya satu foto rejected yang diupload ulang,
-        // maka status trip utama juga direset.
         if ($tripStatusShouldBeReset) {
             $updates['status_trip'] = 'verifikasi gambar';
         }
@@ -153,7 +152,7 @@ class TripController extends Controller
     public function updateStart(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
-            'license_plate'   => 'sometimes|string|max:20',
+            'vehicle_id'      => 'sometimes|integer|exists:vehicles,id',
             'start_km'        => 'sometimes|integer',
             'start_km_photo'  => 'sometimes|image|max:5120',
         ]);
@@ -166,7 +165,7 @@ class TripController extends Controller
             $validated = $validator->validated();
             $trip->fill($this->getFieldsToReset($trip, ['start_km_photo']));
 
-            if (isset($validated['license_plate'])) $trip->license_plate = $validated['license_plate'];
+            if (isset($validated['vehicle_id'])) $trip->vehicle_id = $validated['vehicle_id'];
             if (isset($validated['start_km'])) $trip->start_km = $validated['start_km'];
 
             if ($request->hasFile('start_km_photo')) {
@@ -221,9 +220,11 @@ class TripController extends Controller
     public function updateAfterLoading(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
-            'muat_photo'        => 'sometimes|image|max:5120',
-            'delivery_letters'    => 'sometimes|array',
-            'delivery_letters.*'  => 'image|max:20480',
+            'km_muat_photo' => 'sometimes|image|max:5120',
+            'kedatangan_muat_photo' => 'sometimes|image|max:5120',
+            'delivery_order_photo' => 'sometimes|image|max:5120',
+            'muat_photo'    => 'sometimes|array',
+            'muat_photo.*'  => 'image|max:30720',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
@@ -231,36 +232,48 @@ class TripController extends Controller
 
         DB::beginTransaction();
         try {
-            $trip->fill($this->getFieldsToReset($trip, ['muat_photo', 'delivery_letters_initial']));
+            $trip->fill($this->getFieldsToReset($trip, ['km_muat_photo', 'kedatangan_muat_photo', 'muat_photo', 'delivery_order_photo']));
+
+            if ($request->hasFile('km_muat_photo')) {
+                if ($trip->km_muat_photo_path) Storage::disk('public')->delete($trip->km_muat_photo_path);
+                $file = $request->file('km_muat_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/km_muat', $fileName, 'public');
+                $trip->km_muat_photo_path = $path;
+                $this->triggerVerificationProcess($trip, 'km_muat_photo', 'Foto KM Muat', Storage::url($path));
+            }
+
+            if ($request->hasFile('kedatangan_muat_photo')) {
+                if ($trip->kedatangan_muat_photo_path) Storage::disk('public')->delete($trip->kedatangan_muat_photo_path);
+                $file = $request->file('kedatangan_muat_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/kedatangan_muat', $fileName, 'public');
+                $trip->kedatangan_muat_photo_path = $path;
+                $this->triggerVerificationProcess($trip, 'kedatangan_muat_photo', 'Foto Kedatangan Muat', Storage::url($path));
+            }
 
             if ($request->hasFile('muat_photo')) {
-                if ($trip->muat_photo_path) Storage::disk('public')->delete($trip->muat_photo_path);
-
-                $file = $request->file('muat_photo');
-                $fileName = $this->generateUniqueFileName($file);
-                $path = $file->storeAs('trip_photos/muat_photo', $fileName, 'public');
-
-                $trip->muat_photo_path = $path;
-
-                $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($path));
-            }
-
-            if ($request->hasFile('delivery_letters')) {
-                $deliveryData = $trip->delivery_letter_path ?? ['initial_letters' => [], 'final_letters' => []];
-                if (!empty($deliveryData['initial_letters'])) {
-                    Storage::disk('public')->delete($deliveryData['initial_letters']);
+                if ($trip->muat_photo_path) {
+                    Storage::disk('public')->delete($trip->muat_photo_path);
                 }
-
-                $initialPaths = [];
-                foreach ($request->file('delivery_letters') as $file) {
+                $muatPaths = [];
+                foreach ($request->file('muat_photo') as $file) {
                     $fileName = $this->generateUniqueFileName($file);
-                    $initialPaths[] = $file->storeAs('trip_photos/delivery_letters', $fileName, 'public');
+                    $muatPaths[] = $file->storeAs('trip_photos/muat_photo', $fileName, 'public');
                 }
-                $deliveryData['initial_letters'] = $initialPaths;
-                $trip->delivery_letter_path = $deliveryData;
-
-                $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($initialPaths[0]));
+                $trip->muat_photo_path = $muatPaths;
+                $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($muatPaths[0]));
             }
+
+            if ($request->hasFile('delivery_order_photo')) {
+                if ($trip->delivery_order_photo_path) Storage::disk('public')->delete($trip->delivery_order_photo_path);
+                $file = $request->file('delivery_order_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
+                $trip->delivery_order_photo_path = $path;
+                $this->triggerVerificationProcess($trip, 'delivery_order_photo', 'Delivery Order', Storage::url($path));
+            }
+
             $trip->status_lokasi = 'menuju lokasi bongkar';
             $trip->status_muatan = 'termuat';
             $trip->save();
@@ -279,9 +292,10 @@ class TripController extends Controller
     public function uploadTripDocuments(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
-            'delivery_order' => 'sometimes|image|max:5120',
-            'segel_photo' => 'sometimes|image|max:5120',
+            'delivery_letters'    => 'sometimes|array',
+            'delivery_letters.*'  => 'image|max:30720',
             'timbangan_kendaraan_photo' => 'sometimes|image|max:5120',
+            'segel_photo' => 'sometimes|image|max:5120',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
@@ -289,15 +303,23 @@ class TripController extends Controller
 
         DB::beginTransaction();
         try {
-            $trip->fill($this->getFieldsToReset($trip, ['delivery_order', 'segel_photo', 'timbangan_kendaraan_photo']));
+            $trip->fill($this->getFieldsToReset($trip, ['delivery_letters_initial', 'segel_photo', 'timbangan_kendaraan_photo']));
 
-            if ($request->hasFile('delivery_order')) {
-                if ($trip->delivery_order_path) Storage::disk('public')->delete($trip->delivery_order_path);
-                $file = $request->file('delivery_order');
-                $fileName = $this->generateUniqueFileName($file);
-                $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
-                $trip->delivery_order_path = $path;
-                $this->triggerVerificationProcess($trip, 'delivery_order', 'Delivery Order', Storage::url($path));
+            if ($request->hasFile('delivery_letters')) {
+                $deliveryData = $trip->delivery_letter_path ?? ['initial_letters' => [], 'final_letters' => []];
+                if (!empty($deliveryData['initial_letters'])) {
+                    Storage::disk('public')->delete($deliveryData['initial_letters']);
+                }
+
+                $initialPaths = [];
+                foreach ($request->file('delivery_letters') as $file) {
+                    $fileName = $this->generateUniqueFileName($file);
+                    $initialPaths[] = $file->storeAs('trip_photos/delivery_letters', $fileName, 'public');
+                }
+                $deliveryData['initial_letters'] = $initialPaths;
+                $trip->delivery_letter_path = $deliveryData;
+
+                $this->triggerVerificationProcess($trip, 'delivery_letters_initial', 'Surat Jalan Awal', Storage::url($initialPaths[0]));
             }
 
             if ($request->hasFile('segel_photo')) {
@@ -339,26 +361,6 @@ class TripController extends Controller
                 'status_muatan' => 'proses bongkar',
             ]);
 
-            $normalizedLicensePlate = Str::lower(str_replace(' ', '', $trip->license_plate));
-
-            $vehicle = Vehicle::whereRaw("LOWER(REPLACE(license_plate, ' ', '')) = ?", [$normalizedLicensePlate])->first();
-
-            if (!$vehicle) {
-                $vehicle = Vehicle::create([
-                    'license_plate' => $normalizedLicensePlate,
-                ]);
-            }
-
-            VehicleLocation::create([
-                'vehicle_id'  => $vehicle->id,
-                'user_id'     => $trip->user_id,
-                'location'    => $trip->destination,
-                'event_type'  => 'trip_completion',
-                'trip_id'     => $trip->id,
-                'remarks'     => 'Telah tiba di lokasi bongkar: ' . $trip->destination,
-                'reported_at' => now(),
-            ]);
-
             DB::commit();
             return response()->json([
                 'message' => 'Status berhasil diupdate dan lokasi kendaraan telah dicatat.',
@@ -389,6 +391,7 @@ class TripController extends Controller
         $validator = Validator::make($request->all(), [
             'end_km'            => 'sometimes|integer|gt:' . ($trip->start_km ?? 0),
             'end_km_photo'      => 'sometimes|image|max:5120',
+            'kedatangan_bongkar_photo'      => 'sometimes|image|max:5120',
             'bongkar_photo'     => 'sometimes|array',
             'bongkar_photo.*'   => 'image|max:20480',
             'delivery_letters'  => 'sometimes|array',
@@ -401,7 +404,7 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $validator->validated();
-            $trip->fill($this->getFieldsToReset($trip, ['end_km_photo', 'bongkar_photo', 'delivery_letters_final']));
+            $trip->fill($this->getFieldsToReset($trip, ['end_km_photo', 'kedatangan_bongkar_photo', 'bongkar_photo', 'delivery_letters_final']));
 
             if (isset($validated['end_km'])) $trip->end_km = $validated['end_km'];
 
@@ -412,6 +415,15 @@ class TripController extends Controller
                 $path = $file->storeAs('trip_photos/end_km_photo', $fileName, 'public');
                 $trip->end_km_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'end_km_photo', 'Foto KM Akhir', Storage::url($path));
+            }
+
+            if ($request->hasFile('kedatangan_bongkar_photo')) {
+                if ($trip->kedatangan_bongkar_photo_path) Storage::disk('public')->delete($trip->kedatangan_bongkar_photo_path);
+                $file = $request->file('kedatangan_bongkar_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/kedatangan_bongkar_photo', $fileName, 'public');
+                $trip->kedatangan_bongkar_photo_path = $path;
+                $this->triggerVerificationProcess($trip, 'kedatangan_bongkar_photo', 'Foto Kedatangan Bongkar', Storage::url($path));
             }
 
             if ($request->hasFile('bongkar_photo')) {
@@ -464,7 +476,7 @@ class TripController extends Controller
     public function indexDriver()
     {
         $driverId = Auth::id();
-        $trips = Trip::with('user')
+        $trips = Trip::with('user', 'vehicle')
             ->where('user_id', $driverId)
             ->latest()
             ->get();
@@ -477,6 +489,6 @@ class TripController extends Controller
      */
     public function show(Trip $trip)
     {
-        return response()->json($trip->load('user'));
+        return response()->json($trip->load(['user', 'vehicle']));
     }
 }

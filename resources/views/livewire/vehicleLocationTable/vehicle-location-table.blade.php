@@ -19,16 +19,16 @@
             class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="mb-4 flex flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center gap-3">
-                    <span class="text-gray-500 dark:text-gray-400">Tampil</span>
+                    <span class="text-gray-500 dark:text-gray-400">Show</span>
                     <select wire:model.live="perPage"
                         class="h-9 w-auto rounded-lg border border-gray-300 bg-transparent text-sm focus:outline-none dark:border-gray-700">
                         <option value="5">5</option>
                         <option value="10">10</option>
                         <option value="25">25</option>
                     </select>
-                    <span class="text-gray-500 dark:text-gray-400">data</span>
+                    <span class="text-gray-500 dark:text-gray-400">entries</span>
                 </div>
-                <input type="text" placeholder="Cari driver, plat nomor, atau keterangan..."
+                <input type="text" placeholder="Search..."
                     wire:model.live.debounce.300ms="search"
                     class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:outline-none xl:w-[300px] dark:border-gray-700">
             </div>

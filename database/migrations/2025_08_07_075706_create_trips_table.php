@@ -13,13 +13,16 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
+            // Pembuatan Tugas TRIP di Admin Dashboard
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('project_name');
-            $table->string('origin');
-            $table->string('destination');
+            $table->text('origin'); // Menyimpan koordinat awal dan alamat lengkap dalam array
+            $table->text('destination'); // Menyimpan koordinat akhir dan alamat lengkap dalam array
+            $table->time('slot_time'); //waktu deadline kendaraan muat barang
+            $table->enum('jenis_berat', ['CDDL', 'CDDS', 'CDE']); // CDDL = 8 TON LEBIH, CDDS = 8 TON KURANG, CDE = 4 TON KURANG
 
-            // Data Awal Perjalanan
-            $table->string('license_plate')->nullable();
+            // Data Awal Perjalanan (updateStart)
+            $table->foreignId('vehicle_id')->nullable()->constrained('vehicles')->onDelete('cascade');
             $table->integer('start_km')->nullable();
             $table->string('start_km_photo_path')->nullable();
             $table->enum('start_km_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
@@ -27,12 +30,36 @@ return new class extends Migration
             $table->timestamp('start_km_photo_verified_at')->nullable();
             $table->text('start_km_photo_rejection_reason')->nullable();
 
-            // Data Setelah Muat
-            $table->string('delivery_order_path')->nullable();
-            $table->enum('delivery_order_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('delivery_order_verified_by')->nullable()->constrained('users');
-            $table->timestamp('delivery_order_verified_at')->nullable();
-            $table->text('delivery_order_rejection_reason')->nullable();
+            // Data Persiapan Muat & Proses Muat & Selesai Muat (updateAfterLoading)
+            $table->string('km_muat_photo_path')->nullable();
+            $table->enum('km_muat_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('km_muat_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('km_muat_photo_verified_at')->nullable();
+            $table->text('km_muat_photo_rejection_reason')->nullable();
+
+            $table->string('kedatangan_muat_photo_path')->nullable();
+            $table->enum('kedatangan_muat_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('kedatangan_muat_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('kedatangan_muat_photo_verified_at')->nullable();
+            $table->text('kedatangan_muat_photo_rejection_reason')->nullable();
+
+            $table->string('delivery_order_photo_path')->nullable();
+            $table->enum('delivery_order_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('delivery_order_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('delivery_order_photo_verified_at')->nullable();
+            $table->text('delivery_order_photo_rejection_reason')->nullable();
+
+            $table->text('muat_photo_path')->nullable(); //berisi foto proses muat dan selesai muat yang disimpan di array
+            $table->enum('muat_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('muat_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('muat_photo_verified_at')->nullable();
+            $table->text('muat_photo_rejection_reason')->nullable();
+
+            // Data Setelah Selesai Muat (uploadTripDocuments)
+            $table->enum('delivery_letter_initial_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('delivery_letter_initial_verified_by')->nullable()->constrained('users');
+            $table->timestamp('delivery_letter_initial_verified_at')->nullable()->after('delivery_letter_initial_verified_by');
+            $table->text('delivery_letter_initial_rejection_reason')->nullable()->after('delivery_letter_initial_verified_at');
 
             $table->string('timbangan_kendaraan_photo_path')->nullable();
             $table->enum('timbangan_kendaraan_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
@@ -46,19 +73,7 @@ return new class extends Migration
             $table->timestamp('segel_photo_verified_at')->nullable();
             $table->text('segel_photo_rejection_reason')->nullable();
 
-            // Data Proses Muat
-            $table->string('muat_photo_path')->nullable();
-            $table->enum('muat_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('muat_photo_verified_by')->nullable()->constrained('users');
-            $table->timestamp('muat_photo_verified_at')->nullable();
-            $table->text('muat_photo_rejection_reason')->nullable();
-
-            // Data Proses Bongkar & Selesai
-            $table->text('bongkar_photo_path')->nullable();
-            $table->enum('bongkar_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('bongkar_photo_verified_by')->nullable()->constrained('users');
-            $table->timestamp('bongkar_photo_verified_at')->nullable();
-            $table->text('bongkar_photo_rejection_reason')->nullable();
+            // Data Persiapan Bongkar & Proses Bongkar & Selesai Bongkar (updateFinish)
 
             $table->integer('end_km')->nullable();
             $table->string('end_km_photo_path')->nullable();
@@ -67,19 +82,25 @@ return new class extends Migration
             $table->timestamp('end_km_photo_verified_at')->nullable();
             $table->text('end_km_photo_rejection_reason')->nullable();
 
-            // Surat jalan bisa diupload 2x, kita satukan saja
-            $table->text('delivery_letter_path')->nullable();
-            // Tambahkan kolom baru untuk verifikasi Surat Jalan AWAL (Initial)
-            $table->enum('delivery_letter_initial_status', ['pending', 'approved', 'rejected'])->default('pending')->after('end_km_photo_rejection_reason');
-            $table->foreignId('delivery_letter_initial_verified_by')->nullable()->constrained('users')->after('delivery_letter_initial_status');
-            $table->timestamp('delivery_letter_initial_verified_at')->nullable()->after('delivery_letter_initial_verified_by');
-            $table->text('delivery_letter_initial_rejection_reason')->nullable()->after('delivery_letter_initial_verified_at');
+            $table->string('kedatangan_bongkar_photo_path')->nullable();
+            $table->enum('kedatangan_bongkar_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('kedatangan_bongkar_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('kedatangan_bongkar_photo_verified_at')->nullable();
+            $table->text('kedatangan_bongkar_photo_rejection_reason')->nullable();
 
-            // Tambahkan kolom baru untuk verifikasi Surat Jalan AKHIR (Final)
-            $table->enum('delivery_letter_final_status', ['pending', 'approved', 'rejected'])->default('pending')->after('delivery_letter_initial_rejection_reason');
-            $table->foreignId('delivery_letter_final_verified_by')->nullable()->constrained('users')->after('delivery_letter_final_status');
+            $table->text('bongkar_photo_path')->nullable(); //berisi foto proses bongkar dan selesai bongkar yang disimpan di array
+            $table->enum('bongkar_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('bongkar_photo_verified_by')->nullable()->constrained('users');
+            $table->timestamp('bongkar_photo_verified_at')->nullable();
+            $table->text('bongkar_photo_rejection_reason')->nullable();
+
+            $table->enum('delivery_letter_final_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('delivery_letter_final_verified_by')->nullable()->constrained('users');
             $table->timestamp('delivery_letter_final_verified_at')->nullable()->after('delivery_letter_final_verified_by');
             $table->text('delivery_letter_final_rejection_reason')->nullable()->after('delivery_letter_final_verified_at');
+
+            // Surat jalan bisa diupload 2x, 1x ketika selesai muat dan 1x ketika selesai bongkar
+            $table->text('delivery_letter_path')->nullable();
 
             // Status Utama
             $table->enum('status_trip', [

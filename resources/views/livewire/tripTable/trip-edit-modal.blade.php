@@ -1,8 +1,10 @@
-<div x-show="$wire.showModal" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" x-cloak>
+<div x-show="$wire.showModal" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5"
+    x-cloak>
     <div @click="$wire.closeModal()" class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-sm"></div>
 
+    {{-- Mengubah max-w-2xl menjadi max-w-3xl agar lebih lebar untuk layout 2 kolom --}}
     <div @click.outside="$wire.closeModal()"
-        class="no-scrollbar relative w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 dark:bg-boxdark lg:p-8">
+        class="no-scrollbar relative w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 dark:bg-boxdark lg:p-8 max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between border-b pb-4 dark:border-gray-800">
             <h4 class="text-xl font-semibold text-gray-800 dark:text-white/90">
                 {{ $tripId ? 'Edit Trip' : 'Create New Trip' }}
@@ -17,70 +19,139 @@
         </div>
 
         <form wire:submit.prevent="save" class="pt-6">
+            {{-- Menggunakan class yang sama dari template Anda untuk konsistensi --}}
+            @php
+                $inputStyle =
+                    'h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500';
+                $errorStyle = 'mt-1 text-xs text-red-500';
+            @endphp
+
             <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                {{-- Detail Proyek --}}
                 <div class="sm:col-span-2">
                     <label for="projectName"
                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Project Name</label>
-                    <input wire:model="projectName" id="projectName" type="text"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
+                    <input wire:model="projectName" id="projectName" type="text" class="{{ $inputStyle }}"
+                        placeholder="Contoh: Pengiriman Semen Holcim">
                     @error('projectName')
-                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
+                        <span class="{{ $errorStyle }}">{{ $message }}</span>
                     @enderror
                 </div>
-                <div>
-                    <label for="origin"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Origin</label>
-                    <input wire:model="origin" id="origin" type="text"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
-                    @error('origin')
-                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
-                    @enderror
+
+                {{-- Bagian Origin --}}
+                <div class="sm:col-span-2 mt-4 border-t pt-5 dark:border-gray-800">
+                    <h5 class="mb-4 text-base font-medium text-gray-800 dark:text-white/90">📍 Origin Details</h5>
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <div>
+                            <label for="origin_address" class="mb-1.5 block text-sm font-medium">Alamat Lengkap</label>
+                            <input wire:model="origin_address" id="origin_address" type="text"
+                                class="{{ $inputStyle }}" placeholder="Masukkan alamat lengkap">
+                            @error('origin_address')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="origin_link" class="mb-1.5 block text-sm font-medium">Link Google Maps</label>
+                            <input wire:model="origin_link" id="origin_link" type="url" class="{{ $inputStyle }}"
+                                placeholder="https://maps.app.goo.gl/...">
+                            @error('origin_link')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label for="destination"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Destination</label>
-                    <input wire:model="destination" id="destination" type="text"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
-                    @error('destination')
-                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
-                    @enderror
+
+                {{-- Bagian Destination --}}
+                <div class="sm:col-span-2 mt-4 border-t pt-5 dark:border-gray-800">
+                    <h5 class="mb-4 text-base font-medium text-gray-800 dark:text-white/90">🏁 Destination Details</h5>
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <div>
+                            <label for="destination_address" class="mb-1.5 block text-sm font-medium">Alamat
+                                Lengkap</label>
+                            <input wire:model="destination_address" id="destination_address" type="text"
+                                class="{{ $inputStyle }}" placeholder="Masukkan alamat lengkap">
+                            @error('destination_address')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="destination_link" class="mb-1.5 block text-sm font-medium">Link Google
+                                Maps</label>
+                            <input wire:model="destination_link" id="destination_link" type="url"
+                                class="{{ $inputStyle }}" placeholder="https://maps.app.goo.gl/...">
+                            @error('destination_link')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
                 </div>
-                <div class="sm:col-span-2">
-                    <label for="userId"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Assign Driver</label>
-                    <select wire:model="userId" id="userId"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
-                        <option value="">-- Select Driver --</option>
-                        @foreach ($drivers as $driver)
-                            <option value="{{ $driver->id }}">{{ $driver->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('userId')
-                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
-                    @enderror
-                </div>
-                <div class="sm:col-span-2">
-                    <label for="jenisTrip"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Trip Type</label>
-                    <select wire:model="jenisTrip" id="jenisTrip"
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
-                        <option value="muatan perusahan">Muatan Perusahaan</option>
-                        <option value="muatan driver">Muatan Driver</option>
-                    </select>
-                    @error('jenisTrip')
-                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
-                    @enderror
+
+                {{-- Bagian Detail Trip --}}
+                <div class="sm:col-span-2 mt-4 border-t pt-5 dark:border-gray-800">
+                    <h5 class="mb-4 text-base font-medium text-gray-800 dark:text-white/90">📋 Trip Details</h5>
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <div>
+                            <label for="slot_time" class="mb-1.5 block text-sm font-medium">Slot Time</label>
+                            <input wire:model="slot_time" id="slot_time" type="time" class="{{ $inputStyle }}">
+                            @error('slot_time')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="jenis_berat" class="mb-1.5 block text-sm font-medium">Jenis Muatan</label>
+                            <select wire:model="jenis_berat" id="jenis_berat" class="{{ $inputStyle }}">
+                                <option value="" disabled>-- Pilih Jenis --</option>
+                                <option value="CDDL">CDDL (> 8 Ton)</option>
+                                <option value="CDDS">CDDS (< 8 Ton)</option>
+                                <option value="CDE">CDE (< 4 Ton)</option>
+                            </select>
+                            @error('jenis_berat')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label for="userId"
+                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Assign
+                                Driver</label>
+                            <select wire:model="userId" id="userId" class="{{ $inputStyle }}">
+                                <option value="">-- Tidak Di-assign --</option>
+                                @foreach ($drivers as $driver)
+                                    <option value="{{ $driver->id }}">{{ $driver->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('userId')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label for="jenisTrip"
+                                class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Jenis
+                                Trip</label>
+                            <select wire:model="jenisTrip" id="jenisTrip" class="{{ $inputStyle }}">
+                                <option value="muatan perusahan">Muatan Perusahaan</option>
+                                <option value="muatan driver">Muatan Driver</option>
+                            </select>
+                            @error('jenisTrip')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-3 mt-6">
+            <div class="flex items-center justify-end gap-3 mt-8 border-t pt-5 dark:border-gray-800">
                 <button @click="$wire.closeModal()" type="button"
                     class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                     Cancel
                 </button>
                 <button type="submit"
                     class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
-                    <span wire:loading.remove wire:target="save">Save Changes</span>
+                    <span wire:loading.remove wire:target="save">
+                        {{ $tripId ? 'Update Trip' : 'Create Trip' }}
+                    </span>
                     <span wire:loading wire:target="save">Saving...</span>
                 </button>
             </div>

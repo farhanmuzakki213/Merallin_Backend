@@ -101,12 +101,14 @@
                             </div>
                             <div class="col-span-2 flex items-center whitespace-normal break-words border-r border-gray-100 p-3 dark:border-gray-800">
                                 <p class="text-theme-sm text-gray-700 dark:text-gray-400">
-                                    {{ $trip->origin }}
+                                    {{-- Menampilkan hanya alamat dari kolom origin --}}
+                                    {{ data_get($trip->origin, 'address', 'N/A') }}
                                 </p>
                             </div>
                             <div class="col-span-2 flex items-center whitespace-normal break-words border-r border-gray-100 p-3 dark:border-gray-800">
                                 <p class="text-theme-sm text-gray-700 dark:text-gray-400">
-                                    {{ $trip->destination }}
+                                    {{-- Menampilkan hanya alamat dari kolom destination --}}
+                                    {{ data_get($trip->destination, 'address', 'N/A') }}
                                 </p>
                             </div>
                             <div
@@ -230,7 +232,7 @@
                                 <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
                                     <div>
                                         <p class="font-medium text-gray-800 dark:text-white/90">{{ $trip->user->name ?? 'N/A' }}</p>
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $trip->license_plate ?? 'N/A' }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $trip->vehicle->license_plate ?? 'N/A' }}</span>
                                     </div>
                                 </div>
                                 {{-- Project --}}
@@ -279,17 +281,34 @@
                                             @include('livewire.tripTable.verification-status', ['status' => $trip->start_km_photo_status, 'tripId' => $trip->id, 'photoType' => 'start_km_photo'])
                                         </div>
                                     @endif
-                                    {{-- Muat --}}
-                                    @if ($trip->muat_photo_path)
+                                    {{-- KM Muat --}}
+                                    @if ($trip->km_muat_photo_path)
                                         <div class="flex w-full items-center justify-between gap-2">
-                                            <button wire:click="openImageModal('{{ Storage::url($trip->muat_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Muat</button>
-                                            @include('livewire.tripTable.verification-status', ['status' => $trip->muat_photo_status, 'tripId' => $trip->id, 'photoType' => 'muat_photo'])
+                                            <button wire:click="openImageModal('{{ $trip->full_km_muat_photo_url }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">KM Muat</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->km_muat_photo_status, 'tripId' => $trip->id, 'photoType' => 'km_muat_photo'])
                                         </div>
                                     @endif
-                                    @if ($trip->delivery_order_path)
+                                    {{-- Kedatangan Muat --}}
+                                    @if ($trip->kedatangan_muat_photo_path)
                                         <div class="flex w-full items-center justify-between gap-2">
-                                            <button wire:click="openImageModal('{{ Storage::url($trip->delivery_order_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Delivery Order (DO)</button>
-                                            @include('livewire.tripTable.verification-status', ['status' => $trip->delivery_order_status, 'tripId' => $trip->id, 'photoType' => 'delivery_order'])
+                                            <button wire:click="openImageModal('{{ $trip->full_kedatangan_muat_photo_url }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Tiba Muat</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->kedatangan_muat_photo_status, 'tripId' => $trip->id, 'photoType' => 'kedatangan_muat_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Delivery Order --}}
+                                    @if ($trip->delivery_order_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ $trip->full_delivery_order_photo_url }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Delivery Order (DO)</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->delivery_order_photo_status, 'tripId' => $trip->id, 'photoType' => 'delivery_order_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Muat --}}
+                                    @if (!empty($trip->muat_photo_path))
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openGalleryModal({{ $trip->id }}, 'muat')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                                                Muat ({{ count($trip->muat_photo_path) }} Foto)
+                                            </button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->muat_photo_status, 'tripId' => $trip->id, 'photoType' => 'muat_photo'])
                                         </div>
                                     @endif
                                     @if ($trip->timbangan_kendaraan_photo_path)
@@ -304,21 +323,27 @@
                                             @include('livewire.tripTable.verification-status', ['status' => $trip->segel_photo_status, 'tripId' => $trip->id, 'photoType' => 'segel_photo'])
                                         </div>
                                     @endif
-                                    {{-- Bongkar --}}
-                                    @if (!empty($trip->bongkar_photo_path))
-                                        <div class="flex w-full items-center justify-between gap-2">
-                                            {{-- Diubah untuk memanggil modal galeri --}}
-                                            <button wire:click="openBongkarPhotoModal({{ $trip->id }})" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
-                                                Bongkar ({{ count($trip->bongkar_photo_path) }} Foto)
-                                            </button>
-                                            @include('livewire.tripTable.verification-status', ['status' => $trip->bongkar_photo_status, 'tripId' => $trip->id, 'photoType' => 'bongkar_photo'])
-                                        </div>
-                                    @endif
                                     {{-- KM Akhir --}}
                                     @if ($trip->end_km_photo_path)
                                         <div class="flex w-full items-center justify-between gap-2">
-                                            <button wire:click="openImageModal('{{ Storage::url($trip->end_km_photo_path) }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">KM Akhir</button>
+                                            <button wire:click="openImageModal('{{ $trip->full_end_km_photo_url }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">KM Akhir</button>
                                             @include('livewire.tripTable.verification-status', ['status' => $trip->end_km_photo_status, 'tripId' => $trip->id, 'photoType' => 'end_km_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Kedatangan Bongkar --}}
+                                    @if ($trip->kedatangan_bongkar_photo_path)
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openImageModal('{{ $trip->full_kedatangan_bongkar_photo_url }}')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Tiba Bongkar</button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->kedatangan_bongkar_photo_status, 'tripId' => $trip->id, 'photoType' => 'kedatangan_bongkar_photo'])
+                                        </div>
+                                    @endif
+                                    {{-- Bongkar --}}
+                                    @if (!empty($trip->bongkar_photo_path))
+                                        <div class="flex w-full items-center justify-between gap-2">
+                                            <button wire:click="openGalleryModal({{ $trip->id }}, 'bongkar')" class="flex-1 rounded bg-gray-100 px-2 py-1 text-left text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">
+                                                Bongkar ({{ count($trip->bongkar_photo_path) }} Foto)
+                                            </button>
+                                            @include('livewire.tripTable.verification-status', ['status' => $trip->bongkar_photo_status, 'tripId' => $trip->id, 'photoType' => 'bongkar_photo'])
                                         </div>
                                     @endif
                                     {{-- Surat Jalan (SJ) --}}
@@ -393,7 +418,7 @@
         @include('livewire.tripTable.trip-delivery-letter-modal')
     @endif
 
-    @if ($showBongkarPhotoModal)
-        @include('livewire.tripTable.trip-bongkar-photo-modal')
+    @if ($showGalleryModal)
+        @include('livewire.tripTable.trip-gallery-modal')
     @endif
 </div>
