@@ -66,7 +66,11 @@ class VehicleLocationController extends Controller
 
     public function index()
     {
-        $history = VehicleLocation::with('vehicle')->where('user_id', Auth::id())->latest()->get();
+        $history = VehicleLocation::with('vehicle')
+            ->where('user_id', Auth::id())
+            ->whereNull('trip_id')
+            ->latest()
+            ->get();
         return response()->json($history);
     }
 
