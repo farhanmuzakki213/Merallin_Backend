@@ -30,26 +30,48 @@ class BbmKendaraanTable extends Component
 
     private function updateBbmOverallStatus(BbmKendaraan $bbm)
     {
-        $statuses = array_filter([
-            $bbm->start_km_photo_status,
-            $bbm->end_km_photo_status,
-            $bbm->nota_pengisian_photo_status
-        ]);
-
-        if (in_array('rejected', $statuses)) {
-            $bbm->status_bbm_kendaraan = 'revisi gambar';
-        } elseif (in_array('pending', $statuses)) {
-            $bbm->status_bbm_kendaraan = 'verifikasi gambar';
-        } else {
-            $unapprovedStatuses = array_filter($statuses, function ($status) {
-                return $status !== 'approved';
-            });
-            if (empty($unapprovedStatuses)) {
-                $bbm->status_bbm_kendaraan = 'selesai';
-            } else {
-                $bbm->status_bbm_kendaraan = 'proses';
-            }
+        // 1. Kumpulkan status HANYA dari foto yang sudah diunggah (path-nya tidak kosong)
+        $submittedStatuses = [];
+        if ($bbm->start_km_photo_path) {
+            $submittedStatuses[] = $bbm->start_km_photo_status;
         }
+        if ($bbm->end_km_photo_path) {
+            $submittedStatuses[] = $bbm->end_km_photo_status;
+        }
+        if ($bbm->nota_pengisian_photo_path) {
+            $submittedStatuses[] = $bbm->nota_pengisian_photo_status;
+        }
+
+        // Jika belum ada foto sama sekali, statusnya adalah 'proses'
+        if (empty($submittedStatuses)) {
+            $bbm->status_bbm_kendaraan = 'proses';
+            $bbm->save();
+            return;
+        }
+
+        // 2. Tentukan status utama berdasarkan prioritas
+
+        // Prioritas 1: Jika ada SATU SAJA yang ditolak, statusnya 'revisi gambar'.
+        if (in_array('rejected', $submittedStatuses)) {
+            $bbm->status_bbm_kendaraan = 'revisi gambar';
+        }
+        // Prioritas 2: Status 'selesai' HANYA jika SEMUA foto sudah diunggah DAN semuanya 'approved'.
+        elseif (
+            $bbm->start_km_photo_path && $bbm->end_km_photo_path && $bbm->nota_pengisian_photo_path &&
+            !in_array('pending', $submittedStatuses) && !in_array('rejected', $submittedStatuses)
+        ) {
+            $bbm->status_bbm_kendaraan = 'selesai';
+        }
+        // Prioritas 3: Jika ada SATU SAJA yang masih 'pending', statusnya 'verifikasi gambar'.
+        elseif (in_array('pending', $submittedStatuses)) {
+            $bbm->status_bbm_kendaraan = 'verifikasi gambar';
+        }
+        // Prioritas 4 (Fallback): Jika tidak ada yang ditolak/pending, tapi belum semua diunggah.
+        // Ini adalah skenario Anda: start_km 'approved', tapi end_km & nota belum ada.
+        else {
+            $bbm->status_bbm_kendaraan = 'proses';
+        }
+
         $bbm->save();
     }
 
