@@ -30,12 +30,15 @@
                     @enderror
                 </div>
 
-                {{-- Email (disabled) --}}
+                {{-- Email --}}
                 <div class="sm:col-span-2">
                     <label for="email"
                         class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Email Address</label>
-                    <input wire:model="email" id="email" type="email" disabled
-                        class="h-11 w-full rounded-lg border border-gray-300 bg-gray-100 px-4 text-sm dark:border-gray-700 dark:bg-boxdark-2/50 dark:text-gray-400">
+                    <input wire:model="email" id="email" type="email"
+                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
+                    @error('email')
+                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 {{-- Alamat --}}

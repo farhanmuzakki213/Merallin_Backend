@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -33,6 +34,12 @@ class UserTable extends Component
     {
         return [
             'name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($this->userId),
+            ],
             'alamat' => 'nullable|string',
             'no_telepon' => 'nullable|string',
             'userRoles' => 'required|array|min:1',
@@ -78,6 +85,7 @@ class UserTable extends Component
         $user = User::findOrFail($this->userId);
         $user->update([
             'name' => $validatedData['name'],
+            'email' => $validatedData['email'],
             'alamat' => $validatedData['alamat'],
             'no_telepon' => $validatedData['no_telepon'],
         ]);
