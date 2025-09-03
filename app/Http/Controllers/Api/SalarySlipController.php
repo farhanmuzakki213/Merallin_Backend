@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\SalarySlip;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SalarySlipController extends Controller
 {
@@ -12,17 +14,16 @@ class SalarySlipController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index(Request $request)
+    public function index()
     {
-        $user = $request->user();
-
-        $slips = $user->salarySlips()
-                      ->latest()
-                      ->get();
+        $slips = SalarySlip::with('user')
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $slips->user,
+            'data' => $slips,
         ]);
     }
 }
