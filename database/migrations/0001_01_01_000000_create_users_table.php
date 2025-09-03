@@ -13,11 +13,14 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique()->nullable(); // nullable agar tidak error pada data yang lama
             $table->string('name');
+            $table->string('nik')->unique()->nullable();
             $table->string('email')->unique();
             $table->string('profile_photo_path', 2048)->nullable();
             $table->string('alamat')->nullable();
             $table->string('no_telepon')->nullable();
+            $table->string('id_card_path')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

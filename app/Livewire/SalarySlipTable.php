@@ -60,7 +60,7 @@ class SalarySlipTable extends Component
         $rules = [
             'userId' => 'required|exists:users,id',
             'period' => 'required|date_format:Y-m',
-            'salarySlipFile' => ($this->slipId ? 'nullable' : 'required') . '|file|mimes:pdf|max:2048',
+            'salarySlipFile' => 'required|file|mimes:pdf|max:2048',
         ];
 
         $validatedData = $this->validate($rules);

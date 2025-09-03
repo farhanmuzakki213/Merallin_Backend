@@ -22,7 +22,7 @@ class SalarySlipController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $slips,
+            'data' => $slips->user,
         ]);
     }
 }
