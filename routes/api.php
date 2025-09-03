@@ -1,16 +1,18 @@
 <?php
 
-use App\Http\Controllers\Api\AttendanceController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\BbmKendaraanController;
-use App\Http\Controllers\Api\IzinController;
-use App\Http\Controllers\Api\LemburController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\TripController;
-use App\Http\Controllers\Api\VehicleController;
-use App\Http\Controllers\Api\VehicleLocationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\IzinController;
+use App\Http\Controllers\Api\TripController;
+use App\Http\Controllers\Api\LemburController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\SalarySlipController;
+use App\Http\Controllers\Api\BbmKendaraanController;
+use App\Http\Controllers\Api\SharedFileController;
+use App\Http\Controllers\Api\VehicleLocationController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -29,6 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/attendance/clock-out', [AttendanceController::class, 'clockOut']);
     Route::get('/attendance/status-today', [AttendanceController::class, 'statusToday']);
     Route::get('/attendance/history', [AttendanceController::class, 'history']);
+
+    // Rute untuk
+    Route::get('/salary-slips', [SalarySlipController::class, 'index']);
+    Route::get('/share/slip/{uuid}', [SharedFileController::class, 'serveSalarySlip'])->name('salary-slips.share');
 
     // Endpoint umum
     Route::get('/trips/{trip}', [TripController::class, 'show']);

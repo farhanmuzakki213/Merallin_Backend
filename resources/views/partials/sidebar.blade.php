@@ -195,6 +195,25 @@
                                 Locations</span>
                         </a>
                     </li>
+                        <li>
+                            <a href="{{ route('salary-slips.table') }}" wire:navigate @class([
+                                'menu-item group',
+                                'menu-item-active' => request()->routeIs('salary-slips.table'),
+                                'menu-item-inactive' => !request()->routeIs('salary-slips.table'),
+                            ])>
+                                <svg @class([
+                                    'menu-item-icon-active' => request()->routeIs('salary-slips.table'),
+                                    'menu-item-icon-inactive' => !request()->routeIs('salary-slips.table'),
+                                ]) width="24" height="24" viewBox="0 0 24 24"
+                                    fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" clip-rule="evenodd"
+                                        d="M6.25 3.25C4.76853 3.25 3.55 4.46853 3.55 6V18C3.55 19.5315 4.76853 20.75 6.25 20.75H17.85C19.3315 20.75 20.55 19.5315 20.55 18V9.75C20.55 9.33579 20.2142 9 19.85 9C19.4358 9 19.1 9.33579 19.1 9.75V18C19.1 18.7426 18.5426 19.3 17.85 19.3H6.25C5.55736 19.3 5 18.7426 5 18V6C5 5.25736 5.55736 4.7 6.25 4.7H13.4C13.8142 4.7 14.15 4.36421 14.15 3.95C14.15 3.53579 13.8142 3.2 13.4 3.2L6.25 3.25ZM15 3.95C15 3.12157 15.6716 2.45 16.5 2.45H19.85C20.2642 2.45 20.6 2.78579 20.6 3.2V7.5C20.6 7.91421 20.2642 8.25 19.85 8.25C19.4358 8.25 19.1 7.91421 19.1 7.5V4.7H16.5C15.6716 4.7 15 4.02157 15 3.95ZM8.5 9C8.91421 9 9.25 8.66421 9.25 8.25C9.25 7.83579 8.91421 7.5 8.5 7.5H7C6.58579 7.5 6.25 7.83579 6.25 8.25C6.25 8.66421 6.58579 9 7 9H8.5ZM13 12.75C13.4142 12.75 13.75 12.4142 13.75 12C13.75 11.5858 13.4142 11.25 13 11.25H7C6.58579 11.25 6.25 11.5858 6.25 12C6.25 12.4142 6.58579 12.75 7 12.75H13ZM11.5 16.5C11.9142 16.5 12.25 16.1642 12.25 15.75C12.25 15.3358 11.9142 15 11.5 15H7C6.58579 15 6.25 15.3358 6.25 15.75C6.25 16.1642 6.58579 16.5 7 16.5H11.5Z"
+                                        fill="" />
+                                </svg>
+                                <span class="menu-item-text" :class="sidebarToggle ? 'lg:hidden' : ''">Salary Slips</span>
+                            </a>
+                        </li>
+                    </li>
                 </ul>
             </div>
         </nav>
