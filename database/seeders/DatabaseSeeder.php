@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             AttendanceSeeder::class,
             IzinSeeder::class,
             // TripSeeder::class,
-            LemburSeeder::class
+            // LemburSeeder::class
         ]);
     }
 }
