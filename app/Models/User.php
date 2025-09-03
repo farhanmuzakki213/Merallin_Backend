@@ -136,4 +136,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(vehicleLocation::class);
     }
+
+    public function salarySlips()
+    {
+        return $this->hasMany(SalarySlip::class);
+    }
 }

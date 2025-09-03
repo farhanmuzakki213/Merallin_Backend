@@ -1,18 +1,18 @@
 <?php
 
-use App\Http\Controllers\NotificationController;
-use App\Livewire\AttendanceTable;
-use App\Livewire\BbmKendaraanTable;
+use App\Livewire\Profile;
 use App\Livewire\Dashboard;
 use App\Livewire\IzinTable;
-use App\Livewire\LemburTable;
-use App\Livewire\Profile;
 use App\Livewire\TripTable;
 use App\Livewire\UserTable;
-use App\Livewire\VehicleLocationTable;
-use App\Livewire\VehicleTable;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use App\Livewire\LemburTable;
+use App\Livewire\VehicleTable;
+use App\Livewire\AttendanceTable;
+use App\Livewire\SalarySlipTable;
+use App\Livewire\BbmKendaraanTable;
+use Illuminate\Support\Facades\Route;
+use App\Livewire\VehicleLocationTable;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -52,6 +52,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/vehicle-locations/table', VehicleLocationTable::class)->name('vehicleLocations.table');
 
     Route::get('/bbm-kendaraan/table', BbmKendaraanTable::class)->name('bbm.table');
+
+    Route::get('/salary-slips/table', SalarySlipTable::class)->name('salary-slips.table');
+
+
 });
 
 require __DIR__ . '/auth.php';
