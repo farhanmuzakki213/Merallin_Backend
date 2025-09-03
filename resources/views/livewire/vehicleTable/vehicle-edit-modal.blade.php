@@ -26,7 +26,7 @@
 
                 {{-- Model --}}
                 <div>
-                    <label for="model" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Vehicle Model</label>
+                    <label for="model" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Vehicle Model</label> 
                     <input wire:model="model" id="model" type="text"
                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
                     @error('model') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror

@@ -104,7 +104,7 @@ class Dashboard extends Component
         $totalDriver = User::role('driver')->count();
         $perjalananAktif = Trip::where('status_trip', 'proses')->count();
         $karyawanHadirHariIni = Attendance::whereDate('created_at', today())
-            ->where('tipe_absensi', 'clock_in')
+            ->where('tipe_absensi', 'datang')
             ->distinct('user_id')
             ->count();
 
