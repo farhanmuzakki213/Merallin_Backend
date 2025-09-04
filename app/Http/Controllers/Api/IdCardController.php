@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class UserProfileController extends Controller
+class IdCardController extends Controller
 {
     /**
      * Serve the user's ID card file securely.

@@ -18,6 +18,7 @@ class Profile extends Component
     // Properties matching your schema
     public string $name = '';
     public string $email = '';
+    public ?string $nik = '';
     public ?string $alamat = '';
     public ?string $no_telepon = '';
 
@@ -28,7 +29,7 @@ class Profile extends Component
     {
         $user = Auth::user();
         $this->fill(
-            $user->only('name', 'email', 'alamat', 'no_telepon'),
+            $user->only('name', 'email', 'nik', 'alamat', 'no_telepon'),
         );
     }
 
@@ -37,6 +38,7 @@ class Profile extends Component
         $validatedData = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore(Auth::id())],
+            'nik' => ['sometimes', 'string', 'digits:16', Rule::unique('users')->ignore(Auth::id())],
             'alamat' => ['nullable', 'string', 'max:255'],
             'no_telepon' => ['nullable', 'string', 'max:20'],
             'photo' => ['nullable', 'image', 'max:1024'], // 1MB Max
