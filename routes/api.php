@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\BbmKendaraanController;
+use App\Http\Controllers\Api\IdCardController;
 use App\Http\Controllers\Api\SharedFileController;
 use App\Http\Controllers\Api\UserProfileController;
 use App\Http\Controllers\Api\VehicleLocationController;
@@ -37,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/salary-slips', [SalarySlipController::class, 'index']);
     Route::get('/share/slip/{uuid}', [SharedFileController::class, 'serveSalarySlip'])->name('salary-slips.share');
 
-    Route::get('/user/id-card/{uuid}', [UserProfileController::class, 'serveIdCard'])->name('user.id-card.share');
+    Route::get('/user/id-card/{uuid}', [IdCardController::class, 'serveIdCard'])->name('user.id-card.share');
 
     // Endpoint umum
     Route::get('/trips/{trip}', [TripController::class, 'show']);
