@@ -52,12 +52,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Update data perjalanan (menggunakan POST karena ada file upload)
         Route::post('/trips/{trip}/start', [TripController::class, 'updateStart']);
         Route::post('/trips/{trip}/at-loading', [TripController::class, 'updateAtLoadingPoint']);
-        Route::post('/trips/{trip}/finish-loading', [TripController::class, 'finishLoading']);
-        Route::post('/trips/{trip}/after-loading', [TripController::class, 'updateAfterLoading']);
-        Route::post('/trips/{trip}/upload-documents', [TripController::class, 'uploadTripDocuments']);
+        Route::post('/trips/{trip}/update-kedatangan-muat', [TripController::class, 'updateKedatanganMuat']);
+        Route::post('/trips/{trip}/update-proses-muat', [TripController::class, 'updateProsesMuat']);
+        Route::post('/trips/{trip}/upload-selesai-muat', [TripController::class, 'uploadSelesaiMuat']);
         Route::post('/trips/{trip}/at-unloading', [TripController::class, 'updateAtUnloadingPoint']);
-        Route::post('/trips/{trip}/finish-unloading', [TripController::class, 'finishUnloading']);
-        Route::post('/trips/{trip}/finish', [TripController::class, 'updateFinish']);
+        Route::post('/trips/{trip}/update-kedatangan-bongkar', [TripController::class, 'updateKedatanganBongkar']);
+        Route::post('/trips/{trip}/update-proses-bongkar', [TripController::class, 'updateProsesBongkar']);
+        Route::post('/trips/{trip}/update-selesai-bongkar', [TripController::class, 'updateSelesaiBongkar']);
 
         Route::get('/vehicles', [VehicleController::class, 'index']);
 

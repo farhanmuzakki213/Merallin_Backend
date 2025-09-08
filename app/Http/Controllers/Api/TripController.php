@@ -198,33 +198,19 @@ class TripController extends Controller
     {
         $trip->update([
             'status_lokasi' => 'di lokasi muat',
-            'status_muatan' => 'proses muat',
         ]);
         return response()->json(['message' => 'Status berhasil diupdate: Tiba di lokasi muat.', 'data' => $trip]);
     }
 
     /**
-     * Driver konfirmasi telah selesai melakukan proses muat.
+     * Driver mengupload data kedatangan muat.
      */
-    public function finishLoading(Trip $trip)
-    {
-        $trip->update([
-            'status_muatan' => 'selesai muat',
-        ]);
-        return response()->json(['message' => 'Status berhasil diupdate: Proses muat selesai.', 'data' => $trip]);
-    }
-
-    /**
-     * Driver mengupload data setelah selesai muat.
-     */
-    public function updateAfterLoading(Request $request, Trip $trip)
+    public function updateKedatanganMuat(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
             'km_muat_photo' => 'sometimes|image|max:5120',
             'kedatangan_muat_photo' => 'sometimes|image|max:5120',
             'delivery_order_photo' => 'sometimes|image|max:5120',
-            'muat_photo'    => 'sometimes|array',
-            'muat_photo.*'  => 'image|max:30720',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
@@ -232,7 +218,7 @@ class TripController extends Controller
 
         DB::beginTransaction();
         try {
-            $trip->fill($this->getFieldsToReset($trip, ['km_muat_photo', 'kedatangan_muat_photo', 'muat_photo', 'delivery_order_photo']));
+            $trip->fill($this->getFieldsToReset($trip, ['km_muat_photo', 'kedatangan_muat_photo', 'delivery_order_photo']));
 
             if ($request->hasFile('km_muat_photo')) {
                 if ($trip->km_muat_photo_path) Storage::disk('public')->delete($trip->km_muat_photo_path);
@@ -252,6 +238,43 @@ class TripController extends Controller
                 $this->triggerVerificationProcess($trip, 'kedatangan_muat_photo', 'Foto Kedatangan Muat', Storage::url($path));
             }
 
+            if ($request->hasFile('delivery_order_photo')) {
+                if ($trip->delivery_order_photo_path) Storage::disk('public')->delete($trip->delivery_order_photo_path);
+                $file = $request->file('delivery_order_photo');
+                $fileName = $this->generateUniqueFileName($file);
+                $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
+                $trip->delivery_order_photo_path = $path;
+                $this->triggerVerificationProcess($trip, 'delivery_order_photo', 'Delivery Order', Storage::url($path));
+            }
+
+            $trip->status_muatan = 'proses muat';
+            $trip->save();
+
+            DB::commit();
+            return response()->json(['message' => 'Dokumen setelah muat berhasil diunggah.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal mengunggah dokumen setelah muat.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Driver mengupload data proses dan selesai muat.
+     */
+    public function updateProsesMuat(Request $request, Trip $trip)
+    {
+        $validator = Validator::make($request->all(), [
+            'muat_photo'    => 'sometimes|array',
+            'muat_photo.*'  => 'image|max:30720',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $trip->fill($this->getFieldsToReset($trip, ['muat_photo']));
+
             if ($request->hasFile('muat_photo')) {
                 if ($trip->muat_photo_path) {
                     Storage::disk('public')->delete($trip->muat_photo_path);
@@ -265,31 +288,21 @@ class TripController extends Controller
                 $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($muatPaths[0]));
             }
 
-            if ($request->hasFile('delivery_order_photo')) {
-                if ($trip->delivery_order_photo_path) Storage::disk('public')->delete($trip->delivery_order_photo_path);
-                $file = $request->file('delivery_order_photo');
-                $fileName = $this->generateUniqueFileName($file);
-                $path = $file->storeAs('trip_photos/delivery_order', $fileName, 'public');
-                $trip->delivery_order_photo_path = $path;
-                $this->triggerVerificationProcess($trip, 'delivery_order_photo', 'Delivery Order', Storage::url($path));
-            }
-
-            $trip->status_lokasi = 'menuju lokasi bongkar';
-            $trip->status_muatan = 'termuat';
+            $trip->status_muatan = 'selesai muat';
             $trip->save();
 
             DB::commit();
-            return response()->json(['message' => 'Dokumen setelah muat berhasil diunggah.', 'data' => $trip], 200);
+            return response()->json(['message' => 'Dokumen sebelum muat berhasil diunggah.', 'data' => $trip], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Gagal mengunggah dokumen setelah muat.', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Gagal mengunggah dokumen sebelum muat.', 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
      * Driver mengupload dokumen tambahan (DO, Timbangan, Segel).
      */
-    public function uploadTripDocuments(Request $request, Trip $trip)
+    public function uploadSelesaiMuat(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
             'delivery_letters'    => 'sometimes|array',
@@ -339,13 +352,14 @@ class TripController extends Controller
                 $trip->timbangan_kendaraan_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan', Storage::url($path));
             }
+            $trip->status_lokasi = 'menuju lokasi bongkar';
             $trip->save();
 
             DB::commit();
-            return response()->json(['message' => 'Dokumen tambahan berhasil diunggah.', 'data' => $trip], 200);
+            return response()->json(['message' => 'Dokumen selesai muat berhasil diunggah.', 'data' => $trip], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Gagal mengunggah dokumen tambahan.', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Gagal mengunggah dokumen selesai muat.', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -358,7 +372,6 @@ class TripController extends Controller
         try {
             $trip->update([
                 'status_lokasi' => 'di lokasi bongkar',
-                'status_muatan' => 'proses bongkar',
             ]);
 
             DB::commit();
@@ -373,29 +386,14 @@ class TripController extends Controller
     }
 
     /**
-     * Driver konfirmasi telah selesai melakukan proses bongkar.
+     * Driver mengupload data kedatangan bongkar.
      */
-    public function finishUnloading(Trip $trip)
-    {
-        $trip->update([
-            'status_muatan' => 'selesai bongkar',
-        ]);
-        return response()->json(['message' => 'Status berhasil diupdate: Proses bongkar selesai.', 'data' => $trip]);
-    }
-
-    /**
-     * Driver mengupload data akhir setelah selesai bongkar.
-     */
-    public function updateFinish(Request $request, Trip $trip)
+    public function updateKedatanganBongkar(Request $request, Trip $trip)
     {
         $validator = Validator::make($request->all(), [
             'end_km'            => 'sometimes|integer|gt:' . ($trip->start_km ?? 0),
             'end_km_photo'      => 'sometimes|image|max:5120',
             'kedatangan_bongkar_photo'      => 'sometimes|image|max:5120',
-            'bongkar_photo'     => 'sometimes|array',
-            'bongkar_photo.*'   => 'image|max:20480',
-            'delivery_letters'  => 'sometimes|array',
-            'delivery_letters.*' => 'image|max:20480',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
@@ -404,7 +402,7 @@ class TripController extends Controller
         DB::beginTransaction();
         try {
             $validated = $validator->validated();
-            $trip->fill($this->getFieldsToReset($trip, ['end_km_photo', 'kedatangan_bongkar_photo', 'bongkar_photo', 'delivery_letters_final']));
+            $trip->fill($this->getFieldsToReset($trip, ['end_km_photo', 'kedatangan_bongkar_photo']));
 
             if (isset($validated['end_km'])) $trip->end_km = $validated['end_km'];
 
@@ -425,6 +423,32 @@ class TripController extends Controller
                 $trip->kedatangan_bongkar_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'kedatangan_bongkar_photo', 'Foto Kedatangan Bongkar', Storage::url($path));
             }
+            $trip->status_muatan = 'proses bongkar';
+            $trip->save();
+            DB::commit();
+            return response()->json(['message' => 'Dokumen sebelum bongkar berhasil diunggah.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal mengunggah dokumen sebelum bongkar.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Driver mengupload data proses dan selesai bongkar.
+     */
+    public function updateProsesBongkar(Request $request, Trip $trip)
+    {
+        $validator = Validator::make($request->all(), [
+            'bongkar_photo'     => 'sometimes|array',
+            'bongkar_photo.*'   => 'image|max:20480',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $trip->fill($this->getFieldsToReset($trip, ['bongkar_photo']));
 
             if ($request->hasFile('bongkar_photo')) {
                 if ($trip->bongkar_photo_path) {
@@ -438,6 +462,32 @@ class TripController extends Controller
                 $trip->bongkar_photo_path = $bongkarPaths;
                 $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Foto Bongkar', Storage::url($bongkarPaths[0]));
             }
+            $trip->status_muatan = 'selesai bongkar';
+            $trip->save();
+            DB::commit();
+            return response()->json(['message' => 'Dokumen proses bongkar berhasil diunggah.', 'data' => $trip], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal mengunggah dokumen proses bongkar.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Driver mengupload data akhir setelah selesai bongkar.
+     */
+    public function updateSelesaiBongkar(Request $request, Trip $trip)
+    {
+        $validator = Validator::make($request->all(), [
+            'delivery_letters'  => 'sometimes|array',
+            'delivery_letters.*' => 'image|max:20480',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $trip->fill($this->getFieldsToReset($trip, ['delivery_letters_final']));
 
             if ($request->hasFile('delivery_letters')) {
                 $deliveryData = $trip->delivery_letter_path ?? ['initial_letters' => [], 'final_letters' => []];
@@ -459,10 +509,10 @@ class TripController extends Controller
             $trip->status_muatan = null;
             $trip->save();
             DB::commit();
-            return response()->json(['message' => 'Data akhir perjalanan berhasil diperbarui.', 'data' => $trip], 200);
+            return response()->json(['message' => 'Dokumen selesai bongkar berhasil diunggah.', 'data' => $trip], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Gagal memperbarui data akhir perjalanan.', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Gagal mengunggah dokumen selesai bongkar.', 'error' => $e->getMessage()], 500);
         }
     }
 
