@@ -199,9 +199,65 @@ class TripTable extends Component
             "{$photoType}_verified_at" => now(),
             "{$photoType}_rejection_reason" => null,
         ]);
+        $this->updateTripProgress($trip->fresh());
         $this->updateTripStatus($trip->fresh());
 
         session()->flash('message', 'Photo has been approved.');
+    }
+
+    /**
+     * Memperbarui status_lokasi dan status_muatan berdasarkan foto yang sudah diapprove.
+     */
+    private function updateTripProgress(Trip $trip)
+    {
+        // Tahap 1: Mulai Perjalanan
+        if ($trip->start_km_photo_status === 'approved' && $trip->status_lokasi === null) {
+            $trip->update(['status_lokasi' => 'menuju lokasi muat', 'status_muatan' => 'kosong']);
+        }
+
+        // Tahap 2: Proses Muat
+        if (
+            $trip->km_muat_photo_status === 'approved' &&
+            $trip->kedatangan_muat_photo_status === 'approved' &&
+            $trip->delivery_order_photo_status === 'approved' &&
+            $trip->status_muatan === 'kosong'
+        ) {
+            $trip->update(['status_muatan' => 'proses muat']);
+        }
+
+        // Tahap 3: Selesai Muat
+        if ($trip->muat_photo_status === 'approved' && $trip->status_muatan === 'proses muat') {
+            $trip->update(['status_muatan' => 'selesai muat']);
+        }
+
+        // Tahap 4: Menuju Lokasi Bongkar
+        if (
+            $trip->delivery_letter_initial_status === 'approved' &&
+            $trip->timbangan_kendaraan_photo_status === 'approved' &&
+            $trip->segel_photo_status === 'approved' &&
+            $trip->status_lokasi === 'di lokasi muat'
+        ) {
+            $trip->update(['status_lokasi' => 'menuju lokasi bongkar']);
+        }
+
+        // Tahap 5: Proses Bongkar
+        if (
+            $trip->end_km_photo_status === 'approved' &&
+            $trip->kedatangan_bongkar_photo_status === 'approved' &&
+            $trip->status_lokasi === 'di lokasi bongkar'
+        ) {
+            $trip->update(['status_muatan' => 'proses bongkar']);
+        }
+
+        // Tahap 6: Selesai Bongkar
+        if ($trip->bongkar_photo_status === 'approved' && $trip->status_muatan === 'proses bongkar') {
+            $trip->update(['status_muatan' => 'selesai bongkar']);
+        }
+
+        // Tahap 7: Trip Selesai (Finalisasi)
+        if ($trip->delivery_letter_final_status === 'approved' && $trip->status_muatan === 'selesai bongkar') {
+            $trip->update(['status_lokasi' => null, 'status_muatan' => null]);
+        }
     }
 
     /**
@@ -211,10 +267,18 @@ class TripTable extends Component
     {
         // 1. Definisikan semua jenis foto yang WAJIB ada agar trip dianggap 'selesai'
         $mandatoryPhotos = [
-            'start_km_photo', 'km_muat_photo', 'kedatangan_muat_photo',
-            'delivery_order_photo', 'muat_photo', 'timbangan_kendaraan_photo',
-            'segel_photo', 'end_km_photo', 'kedatangan_bongkar_photo',
-            'bongkar_photo', 'delivery_letter_initial', 'delivery_letter_final'
+            'start_km_photo',
+            'km_muat_photo',
+            'kedatangan_muat_photo',
+            'delivery_order_photo',
+            'muat_photo',
+            'timbangan_kendaraan_photo',
+            'segel_photo',
+            'end_km_photo',
+            'kedatangan_bongkar_photo',
+            'bongkar_photo',
+            'delivery_letter_initial',
+            'delivery_letter_final'
         ];
 
         $statuses = [];
