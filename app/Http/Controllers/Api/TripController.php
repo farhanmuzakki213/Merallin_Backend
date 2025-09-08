@@ -179,8 +179,6 @@ class TripController extends Controller
 
                 $this->triggerVerificationProcess($trip, 'start_km_photo', 'Foto KM Awal', Storage::url($path));
             }
-            $trip->status_lokasi = 'menuju lokasi muat';
-            $trip->status_muatan = 'kosong';
             $trip->save();
 
             DB::commit();
@@ -247,7 +245,6 @@ class TripController extends Controller
                 $this->triggerVerificationProcess($trip, 'delivery_order_photo', 'Delivery Order', Storage::url($path));
             }
 
-            $trip->status_muatan = 'proses muat';
             $trip->save();
 
             DB::commit();
@@ -288,7 +285,6 @@ class TripController extends Controller
                 $this->triggerVerificationProcess($trip, 'muat_photo', 'Foto Muat', Storage::url($muatPaths[0]));
             }
 
-            $trip->status_muatan = 'selesai muat';
             $trip->save();
 
             DB::commit();
@@ -352,7 +348,6 @@ class TripController extends Controller
                 $trip->timbangan_kendaraan_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'timbangan_kendaraan_photo', 'Foto Timbangan', Storage::url($path));
             }
-            $trip->status_lokasi = 'menuju lokasi bongkar';
             $trip->save();
 
             DB::commit();
@@ -423,7 +418,6 @@ class TripController extends Controller
                 $trip->kedatangan_bongkar_photo_path = $path;
                 $this->triggerVerificationProcess($trip, 'kedatangan_bongkar_photo', 'Foto Kedatangan Bongkar', Storage::url($path));
             }
-            $trip->status_muatan = 'proses bongkar';
             $trip->save();
             DB::commit();
             return response()->json(['message' => 'Dokumen sebelum bongkar berhasil diunggah.', 'data' => $trip], 200);
@@ -462,7 +456,6 @@ class TripController extends Controller
                 $trip->bongkar_photo_path = $bongkarPaths;
                 $this->triggerVerificationProcess($trip, 'bongkar_photo', 'Foto Bongkar', Storage::url($bongkarPaths[0]));
             }
-            $trip->status_muatan = 'selesai bongkar';
             $trip->save();
             DB::commit();
             return response()->json(['message' => 'Dokumen proses bongkar berhasil diunggah.', 'data' => $trip], 200);
@@ -505,8 +498,6 @@ class TripController extends Controller
             }
 
             $trip->status_trip = 'verifikasi gambar';
-            $trip->status_lokasi = null;
-            $trip->status_muatan = null;
             $trip->save();
             DB::commit();
             return response()->json(['message' => 'Dokumen selesai bongkar berhasil diunggah.', 'data' => $trip], 200);
