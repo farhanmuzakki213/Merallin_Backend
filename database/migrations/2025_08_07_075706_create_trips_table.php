@@ -20,6 +20,8 @@ return new class extends Migration
             $table->text('destination'); // Menyimpan koordinat akhir dan alamat lengkap dalam array
             $table->time('slot_time'); //waktu deadline kendaraan muat barang
             $table->enum('jenis_berat', ['CDDL', 'CDDS', 'CDE']); // CDDL = 8 TON LEBIH, CDDS = 8 TON KURANG, CDE = 4 TON KURANG
+            $table->integer('jumlah_gudang_muat')->default(1);
+            $table->integer('jumlah_gudang_bongkar')->default(1);
 
             // Data Awal Perjalanan (updateStart)
             $table->foreignId('vehicle_id')->nullable()->constrained('vehicles')->onDelete('cascade');

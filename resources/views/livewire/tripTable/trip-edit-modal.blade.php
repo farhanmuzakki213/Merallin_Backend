@@ -1,5 +1,4 @@
-<div x-show="$wire.showModal" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5"
-    x-cloak>
+<div x-show="$wire.showModal" class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-5" x-cloak>
     <div @click="$wire.closeModal()" class="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-sm"></div>
 
     {{-- Mengubah max-w-2xl menjadi max-w-3xl agar lebih lebar untuk layout 2 kolom --}}
@@ -61,7 +60,6 @@
                     </div>
                 </div>
 
-                {{-- Bagian Destination --}}
                 <div class="sm:col-span-2 mt-4 border-t pt-5 dark:border-gray-800">
                     <h5 class="mb-4 text-base font-medium text-gray-800 dark:text-white/90">🏁 Destination Details</h5>
                     <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
@@ -80,6 +78,31 @@
                             <input wire:model="destination_link" id="destination_link" type="url"
                                 class="{{ $inputStyle }}" placeholder="https://maps.app.goo.gl/...">
                             @error('destination_link')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Bagian Jumlah Gudang --}}
+                <div class="sm:col-span-2 mt-4 border-t pt-5 dark:border-gray-800">
+                    <h5 class="mb-4 text-base font-medium text-gray-800 dark:text-white/90">📦 Gudang Details</h5>
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                        <div>
+                            <label for="jumlah_gudang_muat" class="mb-1.5 block text-sm font-medium">Jumlah Gudang
+                                Muat</label>
+                            <input wire:model="jumlah_gudang_muat" id="jumlah_gudang_muat" type="number" min="1"
+                                class="{{ $inputStyle }}">
+                            @error('jumlah_gudang_muat')
+                                <span class="{{ $errorStyle }}">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="jumlah_gudang_bongkar" class="mb-1.5 block text-sm font-medium">Jumlah Gudang
+                                Bongkar</label>
+                            <input wire:model="jumlah_gudang_bongkar" id="jumlah_gudang_bongkar" type="number"
+                                min="1" class="{{ $inputStyle }}">
+                            @error('jumlah_gudang_bongkar')
                                 <span class="{{ $errorStyle }}">{{ $message }}</span>
                             @enderror
                         </div>
