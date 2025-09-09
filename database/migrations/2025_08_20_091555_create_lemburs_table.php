@@ -20,9 +20,12 @@ return new class extends Migration
             $table->text('keterangan_lembur');
             $table->time('mulai_jam_lembur');
             $table->time('selesai_jam_lembur');
-            $table->enum('status_lembur', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
+            $table->enum('status_lembur', ['Ditolak', 'Diterima', 'Menunggu Persetujuan', 'Menunggu Konfirmasi Admin'])->default('Menunggu Persetujuan');
             $table->enum('persetujuan_direksi', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
             $table->enum('persetujuan_manajer', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
+            $table->text('alasan')->nullable();
+            $table->uuid('uuid')->nullable()->unique();
+            $table->string('file_path')->nullable();
             $table->timestamps();
         });
     }
