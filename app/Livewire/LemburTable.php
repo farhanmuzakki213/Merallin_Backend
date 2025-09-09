@@ -5,6 +5,9 @@ namespace App\Livewire;
 use App\Models\Lembur;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
@@ -12,7 +15,7 @@ use Livewire\Attributes\Title;
 #[Title('Overtime Management')]
 class LemburTable extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $perPage = 10;
     public $search = '';
@@ -25,6 +28,8 @@ class LemburTable extends Component
     public $confirmAction;
     public $confirmLevel;
     public $confirmMessage;
+    public $alasan = '';
+    public $file_path;
 
     // Properti untuk modal pratinjau PDF
     public $showPdfPreviewModal = false;
@@ -57,26 +62,66 @@ class LemburTable extends Component
 
     public function cancelConfirmation()
     {
-        $this->reset(['showConfirmModal', 'confirmingLemburId', 'confirmAction', 'confirmLevel', 'confirmMessage']);
+        $this->reset(['showConfirmModal', 'confirmingLemburId', 'confirmAction', 'confirmLevel', 'confirmMessage', 'alasan', 'file_path']);
     }
 
     public function processAction()
     {
         $lembur = Lembur::findOrFail($this->confirmingLemburId);
+        $user = Auth::user();
+
+        // REVISI 1: Logika Bertingkat untuk Direksi
+        // Direksi hanya bisa approve jika Manajer sudah approve.
+        if ($this->confirmLevel === 'direksi' && $lembur->persetujuan_manajer !== 'Diterima') {
+            session()->flash('error', 'Persetujuan harus melalui Manajer terlebih dahulu.');
+            $this->cancelConfirmation();
+            return;
+        }
+
         $newStatus = $this->confirmAction === 'approve' ? 'Diterima' : 'Ditolak';
 
+        // Update status persetujuan untuk level yang bersangkutan
         if ($this->confirmLevel === 'manajer') {
             $lembur->persetujuan_manajer = $newStatus;
         } elseif ($this->confirmLevel === 'direksi') {
             $lembur->persetujuan_direksi = $newStatus;
         }
 
-        if ($lembur->persetujuan_manajer === 'Ditolak' || $lembur->persetujuan_direksi === 'Ditolak') {
+        if ($this->confirmAction === 'approve') {
+            $this->validate(['file_path' => 'required|file|mimes:pdf|max:2048']);
+
+            // Hapus file lama jika ada (penting saat direksi menimpa file manajer).
+            if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
+            }
+
+            $ownerNameSlug = Str::slug($lembur->user->name);
+            $tanggalLembur = \Carbon\Carbon::parse($lembur->tanggal_lembur)->format('d-m-Y');
+            $fileName = "lembur-{$ownerNameSlug}-{$tanggalLembur}-{$lembur->uuid}.pdf";
+            $lembur->file_path = $this->file_path->storeAs('lembur_files', $fileName, 'public');
+
+        } elseif ($this->confirmAction === 'reject') {
+            $this->validate(['alasan' => 'required|string|min:10']);
+
+            // REVISI 2: Jika salah satu menolak, semua status menjadi Ditolak.
+            $lembur->alasan = 'Ditolak oleh ' . $user->getRoleNames()->first() . ': ' . $this->alasan;
+            $lembur->persetujuan_manajer = 'Ditolak';
+            $lembur->persetujuan_direksi = 'Ditolak';
             $lembur->status_lembur = 'Ditolak';
-        } elseif ($lembur->persetujuan_manajer === 'Diterima' && $lembur->persetujuan_direksi === 'Diterima') {
-            $lembur->status_lembur = 'Diterima';
-        } else {
-            $lembur->status_lembur = 'Menunggu Persetujuan';
+
+            if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
+                $lembur->file_path = null; // Kosongkan path di database
+            }
+        }
+
+        // Tentukan status final HANYA JIKA belum ditolak
+        if ($lembur->status_lembur !== 'Ditolak') {
+            if ($lembur->persetujuan_manajer === 'Diterima' && $lembur->persetujuan_direksi === 'Diterima') {
+                $lembur->status_lembur = 'Menunggu Konfirmasi Admin';
+            } else {
+                $lembur->status_lembur = 'Menunggu Persetujuan';
+            }
         }
 
         $lembur->save();
@@ -84,19 +129,45 @@ class LemburTable extends Component
         $this->cancelConfirmation();
     }
 
+    public function askForAdminConfirmation($lemburId, $action)
+    {
+        $this->confirmingLemburId = $lemburId;
+        $this->confirmAction = $action;
+        $this->confirmLevel = 'admin';
+        $actionText = $action === 'approve' ? 'menyelesaikan (final)' : 'menolak (final)';
+        $this->confirmMessage = "Apakah Anda yakin ingin {$actionText} pengajuan lembur ini?";
+        $this->showConfirmModal = true;
+    }
+
     /**
-     * Menampilkan modal pratinjau PDF.
+     * PERBAIKAN: Logika persetujuan final oleh Admin.
      */
+    public function processAdminAction()
+    {
+        $lembur = Lembur::findOrFail($this->confirmingLemburId);
+
+        if ($this->confirmAction === 'approve') {
+            $lembur->status_lembur = 'Diterima';
+            $lembur->alasan = null; // Hapus alasan jika disetujui final
+        } elseif ($this->confirmAction === 'reject') {
+            $this->validate(['alasan' => 'required|string|min:10']);
+            // Jika admin menolak, kembalikan status agar direksi bisa upload ulang.
+            $lembur->status_lembur = 'Menunggu Persetujuan';
+            $lembur->persetujuan_direksi = 'Menunggu Persetujuan'; // Reset status direksi
+            $lembur->alasan = 'Ditolak oleh Admin (perlu revisi): ' . $this->alasan;
+        }
+
+        $lembur->save();
+        session()->flash('message', 'Status lembur berhasil dikonfirmasi oleh Admin.');
+        $this->cancelConfirmation();
+    }
+
     public function showPdfPreview($lemburId)
     {
-        // Eager load relasi user untuk ditampilkan di PDF
         $this->lemburForPdf = Lembur::with('user')->findOrFail($lemburId);
         $this->showPdfPreviewModal = true;
     }
 
-    /**
-     * Menutup modal pratinjau PDF.
-     */
     public function closePdfPreview()
     {
         $this->showPdfPreviewModal = false;

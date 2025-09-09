@@ -40,6 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user/id-card/{uuid}', [IdCardController::class, 'serveIdCard'])->name('user.id-card.share');
 
+    Route::get('/lembur', [LemburController::class, 'index'])->name('index');
+    Route::post('/lembur', [LemburController::class, 'store'])->name('store');
+    Route::get('/lembur/{lembur:uuid}', [LemburController::class, 'show'])->name('show');
+    Route::get('/share/lembur/{uuid}', [SharedFileController::class, 'serveLemburFile'])->name('lembur.share');
+
     // Endpoint umum
     Route::get('/trips/{trip}', [TripController::class, 'show']);
 
@@ -78,5 +83,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/vehicle-locations/{vehicleLocation}/upload-end', [VehicleLocationController::class, 'uploadEndKm']);
     });
     Route::apiResource('izin', IzinController::class)->only(['index', 'store']);
-    Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);
+    // Route::apiResource('lembur', LemburController::class)->only(['index', 'store']);
 });

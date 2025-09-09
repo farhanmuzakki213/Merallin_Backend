@@ -37,9 +37,12 @@
                         <div class="col-span-2 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortBy('user.name')">Karyawan</div>
                         <div class="col-span-2 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortBy('tanggal_lembur')">Tanggal</div>
                         <div class="col-span-1 border-r p-3 dark:border-gray-800">Jadwal</div>
-                        <div class="col-span-3 border-r p-3 dark:border-gray-800">Keterangan</div>
+                        <div class="col-span-2 border-r p-3 dark:border-gray-800">Keterangan</div>
                         <div class="col-span-3 border-r p-3 dark:border-gray-800">Status Persetujuan</div>
+                        <div class="col-span-1 border-r p-3 dark:border-gray-800">File Lembur</div>
+                        @unlessrole('direksi')
                         <div class="col-span-1 p-3">Aksi</div>
+                        @endunlessrole
                     </div>
 
                     {{-- Body Tabel --}}
@@ -64,19 +67,31 @@
                                 {{ \Carbon\Carbon::parse($lembur->mulai_jam_lembur)->format('H:i') }} - {{ \Carbon\Carbon::parse($lembur->selesai_jam_lembur)->format('H:i') }}
                             </div>
                             {{-- Keterangan --}}
-                            <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800 whitespace-normal">
+                            <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800 whitespace-normal">
                                 {{ $lembur->keterangan_lembur ?? '-' }}
                             </div>
                             {{-- Status Persetujuan --}}
                             <div class="col-span-3 space-y-2 border-r p-3 dark:border-gray-800">
                                 @include('livewire.lemburTable.lembur-status', ['lembur' => $lembur])
                             </div>
+                            {{-- File Final --}}
+                            <div class="col-span-1 flex items-center justify-center border-r p-3 dark:border-gray-800">
+                                @if ($lembur->file_path)
+                                    <a href="{{ asset('storage/' . $lembur->file_path) }}" target="_blank" class="flex h-8 w-8 items-center justify-center rounded-md text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="Lihat File Final">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 lucide lucide-eye"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
+                                @else
+                                    -
+                                @endif
+                            </div>
                             {{-- Aksi --}}
+                            @unlessrole('direksi')
                             <div class="col-span-1 flex items-center justify-center p-3">
                                 <button wire:click="showPdfPreview({{ $lembur->id }})" class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="Cetak SPKL">
                                     <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
                                 </button>
                             </div>
+                            @endunlessrole
                         </div>
                     @empty
                         <div class="col-span-12 border-t border-gray-100 p-5 text-center text-gray-500 dark:border-gray-800">

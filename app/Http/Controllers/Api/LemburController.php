@@ -32,7 +32,10 @@ class LemburController extends Controller
                 ], 200);
             }
 
-            return LemburResource::collection($lembur)->response();
+            return response()->json([
+            'success' => true,
+            'data' => $lembur,
+        ]);
 
         } catch (\Exception $e) {
             // Log the exception for debugging
@@ -76,5 +79,32 @@ class LemburController extends Controller
             // Return a generic error response
             return response()->json(['message' => 'Terjadi kesalahan saat menyimpan data lembur.'], 500);
         }
+    }
+
+    public function show(Lembur $lembur): JsonResponse
+    {
+        // Keamanan: Pastikan pengguna yang meminta adalah pemilik data lembur
+        if (Auth::id() !== $lembur->user_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Siapkan data dasar untuk respons
+        $responseData = [
+            'status_final' => $lembur->status_lembur,
+            'alasan_penolakan' => $lembur->alasan,
+            'file_final_url' => null // Default null
+        ];
+
+        // Cek jika status final adalah "Diterima" dan ada file_path
+        if ($lembur->status_lembur === 'Diterima' && !empty($lembur->file_path)) {
+            // Gunakan accessor 'file_url' yang aman dari Model Lembur
+            // Ini akan menghasilkan URL ke controller unduhan, bukan link langsung
+            $responseData['file_final_url'] = $lembur->file_url;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $responseData
+        ]);
     }
 }
