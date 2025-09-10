@@ -276,20 +276,13 @@ class TripController extends Controller
         try {
             $trip->fill($this->getFieldsToReset($trip, ['muat_photo']));
 
-            // Hapus foto-foto lama jika ada
-            if (is_array($trip->muat_photo_path)) {
-                foreach ($trip->muat_photo_path as $gudangPhotos) {
-                    if (is_array($gudangPhotos)) {
-                        Storage::disk('public')->delete($gudangPhotos);
-                    }
-                }
-            }
-
-            // 2. LOGIKA PENYIMPANAN KEMBALI KE BENTUK SEMULA
-            $muatData = [];
+            $muatData = $trip->muat_photo_path ?? [];
             $firstPhotoPath = null;
             // Loop akan secara otomatis menjadikan inputan user sebagai $gudang (key)
             foreach ($request->file('muat_photo') as $gudang => $files) {
+                if (isset($muatData[$gudang]) && is_array($muatData[$gudang])) {
+                    Storage::disk('public')->delete($muatData[$gudang]);
+                }
                 $gudangPaths = [];
                 foreach ($files as $file) {
                     $fileName = $this->generateUniqueFileName($file);
@@ -475,20 +468,13 @@ class TripController extends Controller
         try {
             $trip->fill($this->getFieldsToReset($trip, ['bongkar_photo']));
 
-            // Hapus foto-foto lama
-            if (is_array($trip->bongkar_photo_path)) {
-                foreach ($trip->bongkar_photo_path as $gudangPhotos) {
-                    if (is_array($gudangPhotos)) {
-                        Storage::disk('public')->delete($gudangPhotos);
-                    }
-                }
-            }
-
-            // 2. LOGIKA PENYIMPANAN KEMBALI KE BENTUK SEMULA
-            $bongkarData = [];
+            $bongkarData = $trip->bongkar_photo_path ?? [];
             $firstPhotoPath = null;
             // Loop akan secara otomatis menjadikan inputan user sebagai $gudang (key)
             foreach ($request->file('bongkar_photo') as $gudang => $files) {
+                if (isset($bongkarData[$gudang]) && is_array($bongkarData[$gudang])) {
+                    Storage::disk('public')->delete($bongkarData[$gudang]);
+                }
                 $gudangPaths = [];
                 foreach ($files as $file) {
                     $fileName = $this->generateUniqueFileName($file);
