@@ -40,9 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user/id-card/{uuid}', [IdCardController::class, 'serveIdCard'])->name('user.id-card.share');
 
-    Route::get('/lembur', [LemburController::class, 'index'])->name('index');
-    Route::post('/lembur', [LemburController::class, 'store'])->name('store');
-    Route::get('/lembur/{lembur:uuid}', [LemburController::class, 'show'])->name('show');
+    Route::prefix('lembur')->name('lembur.')->group(function () {
+        Route::get('/', [LemburController::class, 'index'])->name('index'); // nama menjadi lembur.index
+        Route::post('/', [LemburController::class, 'store'])->name('store'); // nama menjadi lembur.store
+        Route::get('/{lembur:uuid}', [LemburController::class, 'show'])->name('show'); // nama menjadi lembur.show
+    });
     Route::get('/share/lembur/{uuid}', [SharedFileController::class, 'serveLemburFile'])->name('lembur.share');
 
     // Endpoint umum
