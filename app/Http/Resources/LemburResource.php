@@ -31,6 +31,11 @@ class LemburResource extends JsonResource
             'status_direksi' => $this->persetujuan_direksi,
             'alasan_penolakan' => $this->alasan,
             'file_final_url' => $this->file_url,
+
+            'jam_mulai_aktual' => $this->jam_mulai_aktual,
+            'jam_selesai_aktual' => $this->jam_selesai_aktual,
+            'foto_mulai_path' => $this->foto_mulai_path,
+            'foto_selesai_path' => $this->foto_selesai_path,
         ];
     }
 }
