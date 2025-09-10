@@ -44,6 +44,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [LemburController::class, 'index'])->name('index'); // nama menjadi lembur.index
         Route::post('/', [LemburController::class, 'store'])->name('store'); // nama menjadi lembur.store
         Route::get('/{lembur:uuid}', [LemburController::class, 'show'])->name('show'); // nama menjadi lembur.show
+
+        // --- PENAMBAHAN: Rute untuk clock-in dan clock-out lembur ---
+        Route::post('/{lembur:uuid}/clock-in', [LemburController::class, 'clockIn'])->name('clockIn');
+        Route::post('/{lembur:uuid}/clock-out', [LemburController::class, 'clockOut'])->name('clockOut');
     });
     Route::get('/share/lembur/{uuid}', [SharedFileController::class, 'serveLemburFile'])->name('lembur.share');
 

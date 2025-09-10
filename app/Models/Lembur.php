@@ -41,6 +41,15 @@ class Lembur extends Model
         'alasan',
         'uuid',
         'file_path',
+
+        // --- PENAMBAHAN DI SINI ---
+        'jam_mulai_aktual',
+        'foto_mulai_path',
+        'lokasi_mulai',
+        'jam_selesai_aktual',
+        'foto_selesai_path',
+        'lokasi_selesai',
+        // --- AKHIR PENAMBAHAN DI SINI ---
     ];
 
     protected $appends = [
