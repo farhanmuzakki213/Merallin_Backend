@@ -16,6 +16,7 @@ class LemburResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'user_id' => $this->user_id,
             'jenis_hari' => $this->jenis_hari,
             'department' => $this->department,
@@ -23,7 +24,13 @@ class LemburResource extends JsonResource
             'keterangan' => $this->keterangan_lembur,
             'jam_mulai' => $this->mulai_jam_lembur,
             'jam_selesai' => $this->selesai_jam_lembur,
-            'diajukan_pada' => $this->created_at->format('Y-m-d H:i:s'),
+            'create_at' => $this->created_at->format('Y-m-d H:i:s'),
+
+            'status_final' => $this->status_lembur,
+            'status_manajer' => $this->persetujuan_manajer,
+            'status_direksi' => $this->persetujuan_direksi,
+            'alasan_penolakan' => $this->alasan,
+            'file_final_url' => $this->file_url,
         ];
     }
 }
