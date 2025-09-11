@@ -61,6 +61,7 @@ class BbmKendaraanTable extends Component
             !in_array('pending', $submittedStatuses) && !in_array('rejected', $submittedStatuses)
         ) {
             $bbm->status_bbm_kendaraan = 'selesai';
+            $bbm->status_pengisian = null;
         }
         // Prioritas 3: Jika ada SATU SAJA yang masih 'pending', statusnya 'verifikasi gambar'.
         elseif (in_array('pending', $submittedStatuses)) {

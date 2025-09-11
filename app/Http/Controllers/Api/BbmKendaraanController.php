@@ -135,6 +135,7 @@ class BbmKendaraanController extends Controller
                 $this->triggerVerificationProcess($bbmKendaraan, 'start_km_photo', 'Foto KM Awal BBM', Storage::url($path));
             }
             $bbmKendaraan->status_pengisian = 'sedang isi bbm';
+            $bbmKendaraan->status_bbm_kendaraan = 'verifikasi gambar';
             $bbmKendaraan->save();
             DB::commit();
             return response()->json(['message' => 'Foto KM awal berhasil diunggah.', 'data' => $bbmKendaraan], 200);
@@ -181,7 +182,6 @@ class BbmKendaraanController extends Controller
                 $bbmKendaraan->nota_pengisian_photo_path = $path;
                 $this->triggerVerificationProcess($bbmKendaraan, 'nota_pengisian_photo', 'Foto Nota BBM', Storage::url($path));
             }
-            $bbmKendaraan->status_pengisian = null;
             $bbmKendaraan->status_bbm_kendaraan = 'verifikasi gambar';
             $bbmKendaraan->save();
             DB::commit();

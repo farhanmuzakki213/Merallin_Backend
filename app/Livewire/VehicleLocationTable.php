@@ -46,6 +46,7 @@ class VehicleLocationTable extends Component
             });
             if (empty($unapprovedStatuses)) {
                 $location->status_vehicle_location = 'selesai';
+                $location->status_lokasi = null;
             } else {
                 $location->status_vehicle_location = 'proses';
             }

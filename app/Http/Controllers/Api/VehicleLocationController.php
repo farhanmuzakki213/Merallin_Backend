@@ -129,6 +129,7 @@ class VehicleLocationController extends Controller
 
             $vehicleLocation->start_location = ['latitude' => $request->latitude, 'longitude' => $request->longitude];
             $vehicleLocation->status_lokasi = 'menuju lokasi';
+            $vehicleLocation->status_vehicle_location = 'verifikasi gambar';
             $vehicleLocation->save();
 
             DB::commit();
@@ -166,7 +167,6 @@ class VehicleLocationController extends Controller
             }
 
             $vehicleLocation->end_location = ['latitude' => $request->latitude, 'longitude' => $request->longitude];
-            $vehicleLocation->status_lokasi = null;
             $vehicleLocation->status_vehicle_location = 'verifikasi gambar';
             $vehicleLocation->save();
 
