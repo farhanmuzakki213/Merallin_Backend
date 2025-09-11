@@ -58,6 +58,16 @@ class Lembur extends Model
     ];
 
     /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'lokasi_mulai' => 'array',
+        'lokasi_selesai' => 'array',
+    ];
+
+    /**
      * Menggunakan event 'creating' untuk memastikan setiap data lembur baru
      * akan memiliki UUID yang unik secara otomatis sebelum disimpan ke database.
      */

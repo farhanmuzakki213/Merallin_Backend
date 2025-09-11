@@ -22,6 +22,14 @@ class LemburTable extends Component
     public $sortField = 'tanggal_lembur';
     public $sortDirection = 'desc';
 
+    // --- PENAMBAHAN: Properti untuk tabel detail ---
+    public $detailPerPage = 5;
+    public $detailSearch = '';
+    public $detailSortField = 'jam_mulai_aktual';
+    public $detailSortDirection = 'desc';
+    public $showImageModal = false;
+    public $imageUrl = '';
+
     // Properti untuk modal konfirmasi
     public $showConfirmModal = false;
     public $confirmingLemburId;
@@ -188,8 +196,55 @@ class LemburTable extends Component
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
+        // Query untuk tabel kedua: Detail Pelaksanaan Lembur (yang sudah dimulai)
+        $lemburDetails = Lembur::with('user')
+            ->where('status_lembur', 'Diterima') // Hanya ambil yang sudah clock-in
+            ->where(function ($query) {
+                $query->whereHas('user', function ($q) {
+                    $q->where('name', 'like', '%' . $this->detailSearch . '%');
+                });
+            })
+            ->orderBy($this->detailSortField, $this->detailSortDirection)
+            ->paginate($this->detailPerPage, ['*'], 'detailPage'); // Beri nama paginator
+
         return view('livewire.lemburTable.lembur-table', [
-            'lemburs' => $lemburs
+            'lemburs' => $lemburs,
+            'lemburDetails' => $lemburDetails // Kirim data kedua ke view
         ]);
+    }
+
+    // --- PENAMBAHAN: Metode untuk sorting tabel detail ---
+    public function sortByDetail($field)
+    {
+        if ($this->detailSortField === $field) {
+            $this->detailSortDirection = $this->detailSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->detailSortDirection = 'asc';
+        }
+        $this->detailSortField = $field;
+    }
+
+    // --- PENAMBAHAN: Metode untuk menampilkan modal foto ---
+    public function openImageModal($url)
+    {
+        $this->imageUrl = $url;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal()
+    {
+        $this->showImageModal = false;
+        $this->imageUrl = '';
+    }
+
+    // --- PENAMBAHAN: Metode untuk kalkulasi durasi ---
+    public function calculateDuration($startTime, $endTime)
+    {
+        if (!$startTime || !$endTime) {
+            return '-';
+        }
+        $start = \Carbon\Carbon::parse($startTime);
+        $end = \Carbon\Carbon::parse($endTime);
+        return $start->diff($end)->format('%H Jam %I Menit');
     }
 }

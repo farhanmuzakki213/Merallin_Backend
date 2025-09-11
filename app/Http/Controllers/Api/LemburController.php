@@ -134,10 +134,10 @@ class LemburController extends Controller
         $lembur->update([
             'jam_mulai_aktual' => now(),
             'foto_mulai_path' => $path,
-            'lokasi_mulai' => json_encode([
+            'lokasi_mulai' => [
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
-            ]),
+            ],
         ]);
 
         return response()->json([
@@ -171,10 +171,10 @@ class LemburController extends Controller
         $lembur->update([
             'jam_selesai_aktual' => now(),
             'foto_selesai_path' => $path,
-            'lokasi_selesai' => json_encode([
+            'lokasi_selesai' => [
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
-            ]),
+            ],
         ]);
 
         return response()->json([
