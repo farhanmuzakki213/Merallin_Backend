@@ -27,7 +27,7 @@ class LemburResource extends JsonResource
             'create_at' => $this->created_at->format('Y-m-d H:i:s'),
 
             'status_final' => $this->status_lembur,
-            'status_manajer' => $this->persetujuan_manajer,
+            // 'status_manajer' => $this->persetujuan_manajer,
             'status_direksi' => $this->persetujuan_direksi,
             'alasan_penolakan' => $this->alasan,
             'file_final_url' => $this->file_url,

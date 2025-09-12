@@ -75,67 +75,48 @@ class LemburTable extends Component
 
     public function processAction()
     {
-        $lembur = Lembur::findOrFail($this->confirmingLemburId);
-        $user = Auth::user();
+    $lembur = Lembur::findOrFail($this->confirmingLemburId);
+    $user = Auth::user();
 
-        // REVISI 1: Logika Bertingkat untuk Direksi
-        // Direksi hanya bisa approve jika Manajer sudah approve.
-        if ($this->confirmLevel === 'direksi' && $lembur->persetujuan_manajer !== 'Diterima') {
-            session()->flash('error', 'Persetujuan harus melalui Manajer terlebih dahulu.');
-            $this->cancelConfirmation();
-            return;
+    // Sekarang hanya ada satu level: direksi
+    $this->confirmLevel = 'direksi';
+    $newStatus = $this->confirmAction === 'approve' ? 'Diterima' : 'Ditolak';
+
+    // Langsung update persetujuan direksi
+    $lembur->persetujuan_direksi = $newStatus;
+
+    if ($this->confirmAction === 'approve') {
+        $this->validate(['file_path' => 'required|file|mimes:pdf|max:2048']);
+
+        if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
         }
 
-        $newStatus = $this->confirmAction === 'approve' ? 'Diterima' : 'Ditolak';
+        $ownerNameSlug = Str::slug($lembur->user->name);
+        $tanggalLembur = \Carbon\Carbon::parse($lembur->tanggal_lembur)->format('d-m-Y');
+        $fileName = "lembur-{$ownerNameSlug}-{$tanggalLembur}-{$lembur->uuid}.pdf";
+        $lembur->file_path = $this->file_path->storeAs('lembur_files', $fileName, 'public');
 
-        // Update status persetujuan untuk level yang bersangkutan
-        if ($this->confirmLevel === 'manajer') {
-            $lembur->persetujuan_manajer = $newStatus;
-        } elseif ($this->confirmLevel === 'direksi') {
-            $lembur->persetujuan_direksi = $newStatus;
+        // Jika direksi setuju, status final langsung ke admin
+        $lembur->status_lembur = 'Menunggu Konfirmasi Admin';
+
+    } elseif ($this->confirmAction === 'reject') {
+        $this->validate(['alasan' => 'required|string|min:10']);
+
+        $lembur->alasan = 'Ditolak oleh ' . $user->getRoleNames()->first() . ': ' . $this->alasan;
+        $lembur->status_lembur = 'Ditolak';
+
+        // Hapus file jika ada saat penolakan
+        if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
+            $lembur->file_path = null;
         }
-
-        if ($this->confirmAction === 'approve') {
-            $this->validate(['file_path' => 'required|file|mimes:pdf|max:2048']);
-
-            // Hapus file lama jika ada (penting saat direksi menimpa file manajer).
-            if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
-            }
-
-            $ownerNameSlug = Str::slug($lembur->user->name);
-            $tanggalLembur = \Carbon\Carbon::parse($lembur->tanggal_lembur)->format('d-m-Y');
-            $fileName = "lembur-{$ownerNameSlug}-{$tanggalLembur}-{$lembur->uuid}.pdf";
-            $lembur->file_path = $this->file_path->storeAs('lembur_files', $fileName, 'public');
-
-        } elseif ($this->confirmAction === 'reject') {
-            $this->validate(['alasan' => 'required|string|min:10']);
-
-            // REVISI 2: Jika salah satu menolak, semua status menjadi Ditolak.
-            $lembur->alasan = 'Ditolak oleh ' . $user->getRoleNames()->first() . ': ' . $this->alasan;
-            $lembur->persetujuan_manajer = 'Ditolak';
-            $lembur->persetujuan_direksi = 'Ditolak';
-            $lembur->status_lembur = 'Ditolak';
-
-            if ($lembur->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($lembur->file_path)) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($lembur->file_path);
-                $lembur->file_path = null; // Kosongkan path di database
-            }
-        }
-
-        // Tentukan status final HANYA JIKA belum ditolak
-        if ($lembur->status_lembur !== 'Ditolak') {
-            if ($lembur->persetujuan_manajer === 'Diterima' && $lembur->persetujuan_direksi === 'Diterima') {
-                $lembur->status_lembur = 'Menunggu Konfirmasi Admin';
-            } else {
-                $lembur->status_lembur = 'Menunggu Persetujuan';
-            }
-        }
-
-        $lembur->save();
-        session()->flash('message', 'Status lembur berhasil diperbarui.');
-        $this->cancelConfirmation();
     }
+
+    $lembur->save();
+    session()->flash('message', 'Status lembur berhasil diperbarui.');
+    $this->cancelConfirmation();
+}
 
     public function askForAdminConfirmation($lemburId, $action)
     {

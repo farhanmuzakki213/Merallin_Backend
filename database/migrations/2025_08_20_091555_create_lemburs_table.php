@@ -32,7 +32,7 @@ return new class extends Migration
 
             $table->enum('status_lembur', ['Ditolak', 'Diterima', 'Menunggu Persetujuan', 'Menunggu Konfirmasi Admin'])->default('Menunggu Persetujuan');
             $table->enum('persetujuan_direksi', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
-            $table->enum('persetujuan_manajer', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
+            // $table->enum('persetujuan_manajer', ['Ditolak', 'Diterima', 'Menunggu Persetujuan'])->default('Menunggu Persetujuan');
             $table->text('alasan')->nullable();
             $table->uuid('uuid')->nullable()->unique();
             $table->string('file_path')->nullable();
