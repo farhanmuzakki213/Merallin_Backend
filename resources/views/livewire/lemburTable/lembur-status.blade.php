@@ -7,7 +7,7 @@
     ];
 @endphp
 {{-- Status Manajer --}}
-<div class="flex items-center justify-between gap-2">
+{{-- <div class="flex items-center justify-between gap-2">
     <div class="flex items-center gap-2">
         <span class="w-16 shrink-0 text-xs text-gray-500">Manajer:</span>
         <p @class([
@@ -36,7 +36,7 @@
             </div>
         @endhasrole
     @endif
-</div>
+</div> --}}
 {{-- Status Direksi --}}
 <div class="flex items-center justify-between gap-2">
     <div class="flex items-center gap-2">
@@ -48,7 +48,7 @@
             {{ $lembur->persetujuan_direksi }}
         </p>
     </div>
-    @if ($lembur->persetujuan_direksi == 'Menunggu Persetujuan' && $lembur->persetujuan_manajer == 'Diterima')
+    @if ($lembur->persetujuan_direksi == 'Menunggu Persetujuan')
         @hasrole('direksi')
             <div class="flex items-center gap-1">
                 <button wire:click="askForConfirmation({{ $lembur->id }}, 'approve', 'direksi')"

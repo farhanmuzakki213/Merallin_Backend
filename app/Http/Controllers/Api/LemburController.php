@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Carbon\Carbon;
 use App\Models\Lembur;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -114,6 +115,44 @@ class LemburController extends Controller
         // Keamanan: Pastikan user adalah pemilik lembur
         if (Auth::id() !== $lembur->user_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // ===== VALIDASI 1: KUOTA LEMBUR MINGGUAN =====
+        $user = Auth::user();
+        $startOfWeek = now()->startOfWeek();
+        $endOfWeek = now()->endOfWeek();
+
+        $completedLembursThisWeek = Lembur::where('user_id', $user->id)
+            ->whereNotNull('jam_selesai_aktual')
+            ->whereBetween('tanggal_lembur', [$startOfWeek, $endOfWeek])
+            ->get();
+
+        $totalSecondsThisWeek = 0;
+        foreach ($completedLembursThisWeek as $completedLembur) {
+            $startTime = Carbon::parse($completedLembur->jam_mulai_aktual);
+            $endTime = Carbon::parse($completedLembur->jam_selesai_aktual);
+            $totalSecondsThisWeek += $startTime->diffInSeconds($endTime);
+        }
+
+        $totalHoursThisWeek = $totalSecondsThisWeek / 3600;
+
+        if ($totalHoursThisWeek >= 10) {
+            return response()->json(['message' => 'Gagal: Anda telah melebihi kuota lembur 10 jam minggu ini.'], 422);
+        }
+
+        // ===== VALIDASI 2: WAKTU DAN TANGGAL MULAI LEMBUR =====
+        $now = now();
+        $scheduledDate = Carbon::parse($lembur->tanggal_lembur)->toDateString();
+        $scheduledStartTime = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
+
+        // Cek apakah hari ini adalah tanggal lembur yang dijadwalkalkan
+        if ($now->toDateString() !== $scheduledDate) {
+            return response()->json(['message' => 'Gagal: Anda hanya bisa memulai lembur pada tanggal yang dijadwalkan (' . $scheduledDate . ').'], 422);
+        }
+
+        // Cek apakah sudah melewati jam mulai yang dijadwalkan
+        if ($now->isBefore($scheduledStartTime)) {
+            return response()->json(['message' => 'Gagal: Anda belum bisa memulai lembur. Jadwal mulai: ' . $scheduledStartTime->format('H:i') . '.'], 422);
         }
 
         // Validasi: Pastikan statusnya Diterima dan belum pernah clock-in

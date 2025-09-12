@@ -36,7 +36,7 @@ class Lembur extends Model
         'mulai_jam_lembur',
         'selesai_jam_lembur',
         'status_lembur',
-        'persetujuan_manajer',
+        // 'persetujuan_manajer',
         'persetujuan_direksi',
         'alasan',
         'uuid',
