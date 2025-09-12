@@ -23,8 +23,7 @@
         <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
             <a href="/" wire:navigate
                 class="flex items-center mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
-                <img class="w-12 h-12 mr-2" src="{{ asset('images/logo/auth-logo128.svg') }}" alt="logo">
-                Merallin
+                <img class="w-120 h-15 mr-2" src="{{ asset('images/logo/logo.svg') }}" alt="logo">
             </a>
                 {{ $slot }}
         </div>
