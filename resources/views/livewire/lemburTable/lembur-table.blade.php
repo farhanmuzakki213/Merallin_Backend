@@ -125,9 +125,9 @@
                             <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">{{ $detail->user->name ?? '-' }}</div>
                             {{-- Waktu --}}
                             <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">
-                                {{ $detail->jam_mulai_aktual ? \Carbon\Carbon::parse($detail->jam_mulai_aktual)->format('d/m/y H:i') : '-' }}
-                                /
-                                {{ $detail->jam_selesai_aktual ? \Carbon\Carbon::parse($detail->jam_selesai_aktual)->format('H:i') : '-' }}
+                                Mulai : {{ $detail->jam_mulai_aktual ? \Carbon\Carbon::parse($detail->jam_mulai_aktual)->format('d/m/y H:i') : '-' }}
+                                <br>
+                                Selesai : {{ $detail->jam_selesai_aktual ? \Carbon\Carbon::parse($detail->jam_selesai_aktual)->format('d/m/y H:i') : '-' }}
                             </div>
                             {{-- Durasi --}}
                             <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
