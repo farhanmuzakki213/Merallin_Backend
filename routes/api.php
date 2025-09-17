@@ -73,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/trips/{trip}/update-selesai-bongkar', [TripController::class, 'updateSelesaiBongkar']);
 
         Route::get('/vehicles', [VehicleController::class, 'index']);
+        Route::get('/vehicles/available-vehicles', [VehicleController::class, 'getAvailableVehicles']);
 
         Route::get('/bbm_kendaraan', [BbmKendaraanController::class, 'index']);
         Route::post('/bbm_kendaraan', [BbmKendaraanController::class, 'store']);

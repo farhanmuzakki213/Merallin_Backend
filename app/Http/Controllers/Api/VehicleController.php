@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BbmKendaraan;
 use App\Models\Trip;
 use App\Models\Vehicle;
 use App\Models\VehicleLocation;
@@ -54,6 +55,33 @@ class VehicleController extends Controller
     //         'vehicles' => $availableVehicles,
     //     ]);
     // }
+
+    public function getAvailableVehicles()
+    {
+        try {
+            $busyOnTrips = Trip::where('status_trip', '!=', 'selesai')
+                ->pluck('vehicle_id');
+
+            $busyOnLocations = VehicleLocation::where('status_vehicle_location', '!=', 'selesai')
+                ->pluck('vehicle_id');
+
+            $busyOnBbm = BbmKendaraan::where('status_bbm_kendaraan', '!=', 'selesai')
+                ->pluck('vehicle_id');
+
+            $busyVehicleIds = $busyOnTrips
+                ->merge($busyOnLocations)
+                ->merge($busyOnBbm)
+                ->unique();
+
+            $availableVehicles = Vehicle::whereNotIn('id', $busyVehicleIds)->latest()->get();
+
+            return response()->json($availableVehicles);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal mengambil kendaraan tersedia: ' . $e->getMessage());
+            return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
+        }
+    }
     public function index()
     {
         $vehicles = Vehicle::latest()->get();

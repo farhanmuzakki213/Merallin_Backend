@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use App\Jobs\EscalateVerificationJob;
+use App\Models\BbmKendaraan;
 use App\Models\User;
 use App\Notifications\PhotoVerificationRequired;
 use Illuminate\Support\Facades\DB;
@@ -151,12 +152,36 @@ class TripController extends Controller
      */
     public function updateStart(Request $request, Trip $trip)
     {
+        $busyOnTrips = Trip::where('status_trip', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyOnLocations = VehicleLocation::where('status_vehicle_location', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyOnBbm = BbmKendaraan::where('status_bbm_kendaraan', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyVehicleIds = $busyOnTrips
+            ->merge($busyOnLocations)
+            ->merge($busyOnBbm)
+            ->unique();
+
+        $availableVehicles = Vehicle::whereNotIn('id', $busyVehicleIds)->latest()->get();
+
+        $availableVehicleIds = $availableVehicles->pluck('id')->toArray();
+
         $validator = Validator::make($request->all(), [
-            'vehicle_id'      => 'required|integer|exists:vehicles,id',
+            'vehicle_id' => [
+                'required',
+                Rule::in($availableVehicleIds)
+            ],
             'start_km'        => 'required|integer',
             'start_km_photo'  => 'sometimes|image|max:5120',
         ]);
         if ($validator->fails()) {
+            if ($validator->errors()->has('vehicle_id') && !in_array($request->vehicle_id, $availableVehicleIds)) {
+                return response()->json(['message' => 'Kendaraan yang dipilih tidak tersedia atau sedang digunakan.'], 422);
+            }
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
         }
 

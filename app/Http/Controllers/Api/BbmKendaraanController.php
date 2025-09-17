@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Jobs\EscalateBbmVerificationJob;
 use App\Models\BbmKendaraan;
+use App\Models\Trip;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\VehicleLocation;
 use App\Notifications\BbmPhotoVerificationRequired;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class BbmKendaraanController extends Controller
 {
@@ -38,7 +41,6 @@ class BbmKendaraanController extends Controller
 
             EscalateBbmVerificationJob::dispatch($bbm, $photoDisplayName, $vehicleInfo, $publicPhotoUrl, 'manager', $statusField)->delay(now()->addMinutes(1));
             EscalateBbmVerificationJob::dispatch($bbm, $photoDisplayName, $vehicleInfo, $publicPhotoUrl, 'direksi', $statusField)->delay(now()->addMinutes(2));
-
         } catch (\Exception $e) {
             Log::error('Gagal memicu proses verifikasi BBM: ' . $e->getMessage());
         }
@@ -86,19 +88,39 @@ class BbmKendaraanController extends Controller
 
     public function show(BbmKendaraan $bbmKendaraan)
     {
-        // Pastikan user hanya bisa melihat data miliknya
-        if ($bbmKendaraan->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
         return response()->json($bbmKendaraan->load('vehicle', 'user'));
     }
 
     public function store(Request $request)
     {
+        $busyOnTrips = Trip::where('status_trip', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyOnLocations = VehicleLocation::where('status_vehicle_location', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyOnBbm = BbmKendaraan::where('status_bbm_kendaraan', '!=', 'selesai')
+            ->pluck('vehicle_id');
+
+        $busyVehicleIds = $busyOnTrips
+            ->merge($busyOnLocations)
+            ->merge($busyOnBbm)
+            ->unique();
+
+        $availableVehicles = Vehicle::whereNotIn('id', $busyVehicleIds)->latest()->get();
+
+        $availableVehicleIds = $availableVehicles->pluck('id')->toArray();
+
         $validator = Validator::make($request->all(), [
-            'vehicle_id' => 'required|exists:vehicles,id',
+            'vehicle_id' => [
+                'required',
+                Rule::in($availableVehicleIds)
+            ],
         ]);
         if ($validator->fails()) {
+            if ($validator->errors()->has('vehicle_id') && !in_array($request->vehicle_id, $availableVehicleIds)) {
+                return response()->json(['message' => 'Kendaraan yang dipilih tidak tersedia atau sedang digunakan.'], 422);
+            }
             return response()->json(['message' => 'Data tidak valid', 'errors' => $validator->errors()], 422);
         }
 
