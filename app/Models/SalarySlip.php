@@ -23,6 +23,7 @@ class SalarySlip extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
         'period' => 'date',
     ];
 

@@ -49,6 +49,9 @@ class VehicleLocation extends Model
      * @var array
      */
     protected $casts = [
+        'user_id' => 'integer',
+        'vehicle_id' => 'integer',
+        'trip_id' => 'integer',
         'start_location' => 'array',
         'end_location' => 'array',
         'standby_photo_verified_at' => 'datetime',

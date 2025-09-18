@@ -63,6 +63,7 @@ class Lembur extends Model
      * @var array
      */
     protected $casts = [
+        'user_id' => 'integer',
         'lokasi_mulai' => 'array',
         'lokasi_selesai' => 'array',
     ];
