@@ -11,7 +11,7 @@ return [
     |
     */
 
-    'clock_in_time' => '08:00:00',
+    'clock_in_time' => '08:15:00',
 
     'clock_out_time' => '17:00:00',
 
