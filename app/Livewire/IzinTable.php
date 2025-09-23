@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Izin;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
@@ -76,12 +77,13 @@ class IzinTable extends Component
      */
     public function render()
     {
+        $searchTerm = strtolower($this->search);
         $izins = Izin::with('user')
-            ->where(function ($query) {
-                $query->where('jenis_izin', 'like', '%' . $this->search . '%')
-                    ->orWhere('alasan', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('user', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+            ->where(function ($query) use ($searchTerm) {
+                $query->where(DB::raw('LOWER(jenis_izin)'), 'like', '%' . $searchTerm  . '%')
+                    ->orWhere(DB::raw('LOWER(alasan)'), 'like', '%' . $searchTerm  . '%')
+                    ->orWhereHas('user', function ($q) use ($searchTerm) {
+                        $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm  . '%');
                     });
             })
             ->orderBy($this->sortField, $this->sortDirection)

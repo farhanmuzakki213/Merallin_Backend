@@ -36,6 +36,7 @@ class User extends Authenticatable
         'no_telepon',
         'profile_photo_path',
         'nik',
+        'gaji_pokok',
         'id_card_path',
         'uuid',
     ];

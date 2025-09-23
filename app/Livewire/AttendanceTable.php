@@ -8,6 +8,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
@@ -23,11 +24,11 @@ class AttendanceTable extends Component
     public $perPage = 10;
     public $search = '';
 
-    public $showImageModal = false;
-    public $imageUrl = '';
-
     public $filterDate = '';
     public $initialDate = '';
+
+    public $showImageModal = false;
+    public $imageUrl = '';
 
     public function mount(): void
     {
@@ -54,12 +55,12 @@ class AttendanceTable extends Component
 
     public function render()
     {
-        // --- 1. LOGIKA UNTUK TABEL ABSENSI (TETAP SAMA) ---
+        $searchTerm = strtolower($this->search);
         $attendanceQuery = Attendance::query()
             ->with('user')
-            ->whereHas('user', function ($q) {
+            ->whereHas('user', function ($q) use ($searchTerm) {
                 if ($this->search) {
-                    $q->where('name', 'like', '%' . $this->search . '%');
+                    $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%');
                 }
                 $q->whereHas('roles', function ($roleQuery) {
                     $roleQuery->whereIn('name', ['karyawan', 'driver']);
@@ -111,7 +112,7 @@ class AttendanceTable extends Component
         $selectedDateTitle = $isRange ? $startDate->format('d M Y') . ' to ' . $endDate->format('d M Y') : $startDate->format('d M Y');
         $absentUserData = collect();
 
-        $allRelevantUsers = User::query()->whereHas('roles', fn($q) => $q->whereIn('name', ['karyawan', 'driver']))->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))->orderBy('name')->get();
+        $allRelevantUsers = User::query()->whereHas('roles', fn($q) => $q->whereIn('name', ['karyawan', 'driver']))->when($this->search, fn($q) => $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%'))->orderBy('name')->get();
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             $dateToCheck = $date->format('Y-m-d');
@@ -140,7 +141,7 @@ class AttendanceTable extends Component
 
         $itemsOnPage = collect($paginatedAbsentUsers->items());
         $paginatedGroupedAbsentUsers = $itemsOnPage->groupBy('absent_date')->sortKeysDesc();
-
+        // dd($paginatedAttendances);
         return view('livewire.attendanceTable.attendance-table', [
             'attendances' => $paginatedAttendances,
             'absentUsers' => $paginatedAbsentUsers,

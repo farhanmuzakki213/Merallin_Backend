@@ -8,6 +8,7 @@ use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
@@ -165,13 +166,14 @@ class LemburTable extends Component
 
     public function render()
     {
+        $searchTerm = strtolower($this->search);
         $lemburs = Lembur::with('user')
-            ->where(function ($query) {
-                $query->where('keterangan_lembur', 'like', '%' . $this->search . '%')
-                    ->orWhere('department', 'like', '%' . $this->search . '%')
-                    ->orWhere('jenis_hari', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('user', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+            ->where(function ($query) use ($searchTerm) {
+                $query->where(DB::raw('LOWER(keterangan_lembur)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(department)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(jenis_hari)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhereHas('user', function ($q) use ($searchTerm) {
+                        $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%');
                     });
             })
             ->orderBy($this->sortField, $this->sortDirection)
@@ -180,9 +182,9 @@ class LemburTable extends Component
         // Query untuk tabel kedua: Detail Pelaksanaan Lembur (yang sudah dimulai)
         $lemburDetails = Lembur::with('user')
             ->where('status_lembur', 'Diterima') // Hanya ambil yang sudah clock-in
-            ->where(function ($query) {
-                $query->whereHas('user', function ($q) {
-                    $q->where('name', 'like', '%' . $this->detailSearch . '%');
+            ->where(function ($query) use ($searchTerm) {
+                $query->whereHas('user', function ($q) use ($searchTerm) {
+                    $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%');
                 });
             })
             ->orderBy($this->detailSortField, $this->detailSortDirection)

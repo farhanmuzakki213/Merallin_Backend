@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\BbmKendaraan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
@@ -156,12 +157,13 @@ class BbmKendaraanTable extends Component
 
     public function render()
     {
+        $searchTerm = strtolower($this->search);
         $query = BbmKendaraan::with(['user', 'vehicle'])
-            ->where(function ($q) {
-                $q->whereHas('user', function ($subq) {
-                    $subq->where('name', 'like', '%' . $this->search . '%');
-                })->orWhereHas('vehicle', function ($subq) {
-                    $subq->where('license_plate', 'like', '%' . $this->search . '%');
+            ->where(function ($q) use ($searchTerm) {
+                $q->whereHas('user', function ($subq) use ($searchTerm) {
+                    $subq->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%');
+                })->orWhereHas('vehicle', function ($subq) use ($searchTerm) {
+                    $subq->where(DB::raw('LOWER(license_plate)'), 'like', '%' . $searchTerm . '%');
                 });
             });
 

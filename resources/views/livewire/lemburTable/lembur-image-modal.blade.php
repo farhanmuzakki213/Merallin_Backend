@@ -1,6 +1,6 @@
-<div x-data="{ show: @entangle('showImageModal') }" x-show="show" x-transition:enter="ease-out duration-300"
-    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
-    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+<div x-data="{ show: @entangle('showImageModal') }" x-show="show" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
     class="fixed inset-0 z-[999999] flex items-center justify-center bg-black bg-opacity-75 p-4" x-cloak>
 
     <div class="relative max-w-4xl max-h-[90vh] w-auto">
@@ -15,6 +15,7 @@
         </button>
 
         {{-- Konten Gambar --}}
-        <img src="{{ $imageUrl }}" alt="Detail Foto Lembur" class="h-auto w-full rounded-lg object-contain max-h-[90vh]">
+        <img src="{{ $imageUrl }}" alt="Detail Foto Lembur"
+            class="h-auto w-full rounded-lg object-contain max-h-[90vh]">
     </div>
 </div>

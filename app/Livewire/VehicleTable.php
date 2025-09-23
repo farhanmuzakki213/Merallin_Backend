@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Vehicle;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
@@ -101,10 +102,11 @@ class VehicleTable extends Component
 
     public function render()
     {
-        $vehicles = Vehicle::where(function ($query) {
-                $query->where('license_plate', 'like', '%' . $this->search . '%')
-                    ->orWhere('model', 'like', '%' . $this->search . '%')
-                    ->orWhere('type', 'like', '%' . $this->search . '%');
+        $searchTerm = strtolower($this->search);
+        $vehicles = Vehicle::where(function ($query) use ($searchTerm) {
+                $query->where(DB::raw('LOWER(license_plate)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(model)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(type)'), 'like', '%' . $searchTerm . '%');
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
