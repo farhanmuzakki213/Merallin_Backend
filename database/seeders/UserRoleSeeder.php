@@ -26,28 +26,28 @@ class UserRoleSeeder extends Seeder
         // Create Admin User
 
         $manager = User::factory()->create([
-            'name' => 'manager1',
-            'email' => 'manager1@example.com',
+            'name' => 'Nyangnyang Hapidin',
+            'email' => 'nyangnyang.ops@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
-            'no_telepon' => '081234567002',
+            'no_telepon' => '085861201909',
             'password' => Hash::make('password')
         ]);
         $manager->assignRole($role_manager);
 
         $direksi = User::factory()->create([
-            'name' => 'direksi1',
-            'email' => 'direksi1@example.com',
+            'name' => 'Michael Antonius Miru',
+            'email' => 'miru.direksi@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
-            'no_telepon' => '081234567002',
+            'no_telepon' => '082127309984',
             'password' => Hash::make('password')
         ]);
         $direksi->assignRole($role_direksi);
 
         $direksi = User::factory()->create([
-            'name' => 'direksi2',
-            'email' => 'direksi2@example.com',
+            'name' => 'Rizky Dhafin Fauzan',
+            'email' => 'rdhafin.direksi@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
-            'no_telepon' => '081234567002',
+            'no_telepon' => '082130333021',
             'password' => Hash::make('password')
         ]);
         $direksi->assignRole($role_direksi);
@@ -61,12 +61,56 @@ class UserRoleSeeder extends Seeder
         ]);
         $admin->assignRole($role_admin);
 
-        // Create Karyawan User
         $karyawan = User::factory()->create([
-            'name' => 'Karyawan User',
-            'email' => 'karyawan@example.com',
+            'name' => 'Farhan Muzakki',
+            'email' => 'farhan.it@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
-            'no_telepon' => '081234567001',
+            'no_telepon' => '081268772052',
+            'password' => Hash::make('password')
+        ]);
+        $karyawan->assignRole($role_karyawan);
+
+        $karyawan = User::factory()->create([
+            'name' => 'M. Zidhan Prasetyo',
+            'email' => 'zidhan.it@merallin.group',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '083187407180',
+            'password' => Hash::make('password')
+        ]);
+        $karyawan->assignRole($role_karyawan);
+
+        $karyawan = User::factory()->create([
+            'name' => 'Rifko Ahmad',
+            'email' => 'rifko.adm@merallin.group',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '081365121468',
+            'password' => Hash::make('password')
+        ]);
+        $karyawan->assignRole($role_karyawan);
+
+        $karyawan = User::factory()->create([
+            'name' => 'Winaldo Ageng K',
+            'email' => 'ageng.adm@merallin.group',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '0895616031287',
+            'password' => Hash::make('password')
+        ]);
+        $karyawan->assignRole($role_karyawan);
+
+        $karyawan = User::factory()->create([
+            'name' => 'M. Ar-Razi A.Gazali',
+            'email' => 'razi.desain@merallin.group',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '085271339592',
+            'password' => Hash::make('password')
+        ]);
+        $karyawan->assignRole($role_karyawan);
+
+        $karyawan = User::factory()->create([
+            'name' => 'Fadlan Al`Farisi',
+            'email' => 'fadlan.desain@merallin.group',
+            'alamat' => 'Jl. Merdeka No. 1, Bandung',
+            'no_telepon' => '083168667549',
             'password' => Hash::make('password')
         ]);
         $karyawan->assignRole($role_karyawan);
@@ -112,7 +156,5 @@ class UserRoleSeeder extends Seeder
             'password' => Hash::make('password')
         ]);
         $driver5->assignRole($role_driver);
-        $karyawanUsers = User::factory(5)->create();
-        $karyawanUsers->each(fn($user) => $user->assignRole($role_karyawan));
     }
 }

@@ -23,6 +23,13 @@ class Izin extends Model
     ];
 
     /**
+     * Atribut yang harus di-cast ke tipe data tertentu.
+     */
+    protected $casts = [
+        'user_id' => 'integer',
+    ];
+
+    /**
      * Mengubah format created_at ke zona waktu WIB saat diakses.
      */
     protected function createdAt(): Attribute

@@ -27,6 +27,8 @@ class Trip extends Model
         'slot_time',
         'jenis_berat',
         'vehicle_id',
+        'jumlah_gudang_muat',
+        'jumlah_gudang_bongkar',
         'start_km',
         'start_km_photo_path',
         'start_km_photo_status',
@@ -298,7 +300,21 @@ class Trip extends Model
 
     protected function fullMuatPhotoUrls(): Attribute
     {
-        return Attribute::make(get: fn() => $this->generateMultipleUrls($this->muat_photo_path));
+        return Attribute::make(get: function () {
+            $structuredUrls = [];
+            $photoPathsByWarehouse = $this->muat_photo_path ?? [];
+
+            if (!is_array($photoPathsByWarehouse)) {
+                return [];
+            }
+
+            foreach ($photoPathsByWarehouse as $warehouse => $paths) {
+                if (is_array($paths)) {
+                    $structuredUrls[$warehouse] = array_map(fn($path) => Storage::url($path), $paths);
+                }
+            }
+            return $structuredUrls;
+        });
     }
 
     protected function fullTimbanganKendaraanPhotoUrl(): Attribute
@@ -323,7 +339,21 @@ class Trip extends Model
 
     protected function fullBongkarPhotoUrls(): Attribute
     {
-        return Attribute::make(get: fn() => $this->generateMultipleUrls($this->bongkar_photo_path));
+        return Attribute::make(get: function () {
+            $structuredUrls = [];
+            $photoPathsByWarehouse = $this->bongkar_photo_path ?? [];
+
+            if (!is_array($photoPathsByWarehouse)) {
+                return [];
+            }
+
+            foreach ($photoPathsByWarehouse as $warehouse => $paths) {
+                if (is_array($paths)) {
+                    $structuredUrls[$warehouse] = array_map(fn($path) => Storage::url($path), $paths);
+                }
+            }
+            return $structuredUrls;
+        });
     }
 
     protected function fullDeliveryLetterUrls(): Attribute

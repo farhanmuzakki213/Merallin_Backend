@@ -23,6 +23,9 @@ class AttendanceTable extends Component
     public $perPage = 10;
     public $search = '';
 
+    public $showImageModal = false;
+    public $imageUrl = '';
+
     public $filterDate = '';
     public $initialDate = '';
 
@@ -144,5 +147,17 @@ class AttendanceTable extends Component
             'groupedAbsentUsers' => $paginatedGroupedAbsentUsers,
             'selectedDate' => $selectedDateTitle,
         ]);
+    }
+
+    public function openImageModal($url): void
+    {
+        $this->imageUrl = $url;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal(): void
+    {
+        $this->showImageModal = false;
+        $this->imageUrl = '';
     }
 }

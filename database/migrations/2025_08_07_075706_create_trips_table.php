@@ -20,6 +20,8 @@ return new class extends Migration
             $table->text('destination'); // Menyimpan koordinat akhir dan alamat lengkap dalam array
             $table->time('slot_time'); //waktu deadline kendaraan muat barang
             $table->enum('jenis_berat', ['CDDL', 'CDDS', 'CDE']); // CDDL = 8 TON LEBIH, CDDS = 8 TON KURANG, CDE = 4 TON KURANG
+            $table->integer('jumlah_gudang_muat')->default(1);
+            $table->integer('jumlah_gudang_bongkar')->default(1);
 
             // Data Awal Perjalanan (updateStart)
             $table->foreignId('vehicle_id')->nullable()->constrained('vehicles')->onDelete('cascade');
@@ -58,8 +60,8 @@ return new class extends Migration
             // Data Setelah Selesai Muat (uploadTripDocuments)
             $table->enum('delivery_letter_initial_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('delivery_letter_initial_verified_by')->nullable()->constrained('users');
-            $table->timestamp('delivery_letter_initial_verified_at')->nullable()->after('delivery_letter_initial_verified_by');
-            $table->text('delivery_letter_initial_rejection_reason')->nullable()->after('delivery_letter_initial_verified_at');
+            $table->timestamp('delivery_letter_initial_verified_at')->nullable();
+            $table->text('delivery_letter_initial_rejection_reason')->nullable();
 
             $table->string('timbangan_kendaraan_photo_path')->nullable();
             $table->enum('timbangan_kendaraan_photo_status', ['pending', 'approved', 'rejected'])->default('pending');
@@ -96,8 +98,8 @@ return new class extends Migration
 
             $table->enum('delivery_letter_final_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('delivery_letter_final_verified_by')->nullable()->constrained('users');
-            $table->timestamp('delivery_letter_final_verified_at')->nullable()->after('delivery_letter_final_verified_by');
-            $table->text('delivery_letter_final_rejection_reason')->nullable()->after('delivery_letter_final_verified_at');
+            $table->timestamp('delivery_letter_final_verified_at')->nullable();
+            $table->text('delivery_letter_final_rejection_reason')->nullable();
 
             // Surat jalan bisa diupload 2x, 1x ketika selesai muat dan 1x ketika selesai bongkar
             $table->text('delivery_letter_path')->nullable();

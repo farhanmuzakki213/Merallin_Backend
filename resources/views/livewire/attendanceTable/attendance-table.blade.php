@@ -108,8 +108,11 @@
                             <div class="col-span-3 border-r border-gray-100 p-3 dark:border-gray-800">
                                 @if ($clock_in = $item['clock_in_data'])
                                     <div class="flex items-start gap-3">
-                                        <img src="{{ $clock_in->photo_url }}" alt="Photo"
-                                            class="h-14 w-14 rounded-md object-cover">
+                                        <button wire:click="openImageModal('{{ $clock_in->photo_url }}')"
+                                            class="h-14 w-14 rounded-md object-cover" title="Lihat Foto Absen Datang">
+                                            <img src="{{ $clock_in->photo_url }}" alt="Photo"
+                                                class="h-14 w-14 rounded-md object-cover">
+                                        </button>
                                         <div class="text-xs">
                                             <p class="font-semibold text-gray-800 dark:text-gray-200">
                                                 {{ \Carbon\Carbon::parse($clock_in->created_at)->format('H:i:s') }}</p>
@@ -129,8 +132,11 @@
                             <div class="col-span-2 border-r border-gray-100 p-3 dark:border-gray-800">
                                 @if ($clock_out = $item['clock_out_data'])
                                     <div class="flex items-start gap-3">
-                                        <img src="{{ $clock_out->photo_url }}" alt="Photo"
-                                            class="h-14 w-14 rounded-md object-cover">
+                                        <button wire:click="openImageModal('{{ $clock_out->photo_url }}')"
+                                            class="h-14 w-14 rounded-md object-cover" title="Lihat Foto Absen Pulang">
+                                            <img src="{{ $clock_out->photo_url }}" alt="Photo"
+                                                class="h-14 w-14 rounded-md object-cover">
+                                        </button>
                                         <div class="text-xs">
                                             <p class="font-semibold text-gray-800 dark:text-gray-200">
                                                 {{ \Carbon\Carbon::parse($clock_out->created_at)->format('H:i:s') }}
@@ -252,4 +258,5 @@
             </div>
         </div>
     </div>
+    @include('livewire.lemburTable.lembur-image-modal')
 </div>

@@ -3,18 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
-use App\Models\Attendance;
 use Carbon\Carbon;
 use DateTimeInterface;
+use App\Models\Attendance;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use NotificationChannels\WebPush\PushSubscription;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use NotificationChannels\WebPush\HasPushSubscriptions;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -33,6 +35,9 @@ class User extends Authenticatable
         'alamat',
         'no_telepon',
         'profile_photo_path',
+        'nik',
+        'id_card_path',
+        'uuid',
     ];
 
     /**
@@ -91,7 +96,40 @@ class User extends Authenticatable
 
     protected $appends = [
         'profile_photo_url',
+        'id_card_url',
+        'file'
     ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function ($user) {
+            if (empty($user->uuid)) {
+                $user->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function getIdCardUrlAttribute(): ?string
+    {
+        // Hanya generate URL jika ada path file dan uuid
+        if ($this->id_card_path && $this->uuid) {
+            return route('user.id-card.share', $this->uuid);
+        }
+        return null;
+    }
+
+    public function getFileAttribute(): ?string
+    {
+        return $this->id_card_path ? Storage::url($this->id_card_path) : null;
+    }
+
+    public function getOriginalIdCardNameAttribute(): ?string
+    {
+        return $this->id_card_path ? basename($this->id_card_path) : null;
+    }
 
     public function pushSubscriptions(): MorphMany
     {
@@ -135,5 +173,10 @@ class User extends Authenticatable
     public function vehicleLocations()
     {
         return $this->hasMany(vehicleLocation::class);
+    }
+
+    public function salarySlips()
+    {
+        return $this->hasMany(SalarySlip::class);
     }
 }

@@ -42,6 +42,12 @@
                     @error('email') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                 </div>
 
+                <div class="sm:col-span-2">
+                    <label for="nik" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">NIK</label>
+                    <input wire:model="nik" id="nik" type="text" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
+                    @error('nik') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                </div>
+
                 <div>
                     <label for="no_telepon" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Phone Number</label>
                     <input wire:model="no_telepon" id="no_telepon" type="text" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">

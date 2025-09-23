@@ -65,6 +65,11 @@ class TripTable extends Component
     public $galleryPhotos = [];
     public $currentGalleryIndex = 0;
 
+    public $jumlah_gudang_muat = 1;
+    public $jumlah_gudang_bongkar = 1;
+
+    public $consolidatedGalleryPhotos = [];
+
     /**
      * Mengekstrak koordinat (latitude, longitude) dari URL Google Maps.
      *
@@ -133,27 +138,35 @@ class TripTable extends Component
         return Excel::download(new TripUserReportExport($dataForExport), $fileName);
     }
 
-    public function openGalleryModal($tripId, $photoType)
+    public function openConsolidatedGalleryModal($tripId, $photoType)
     {
         $trip = Trip::findOrFail($tripId);
-        $photos = [];
+        $photoPathsByWarehouse = [];
         $title = '';
 
-        switch ($photoType) {
-            case 'muat':
-                $photos = $trip->muat_photo_path ?? [];
-                $title = 'Galeri Foto Muat';
-                break;
-            case 'bongkar':
-                $photos = $trip->bongkar_photo_path ?? [];
-                $title = 'Galeri Foto Bongkar';
-                break;
+        if ($photoType === 'muat') {
+            $photoPathsByWarehouse = $trip->muat_photo_path ?? [];
+            $title = 'Galeri Foto Muat';
+        } elseif ($photoType === 'bongkar') {
+            $photoPathsByWarehouse = $trip->bongkar_photo_path ?? [];
+            $title = 'Galeri Foto Bongkar';
         }
 
-        $this->galleryPhotos = $photos;
+        $this->consolidatedGalleryPhotos = [];
+        if (is_array($photoPathsByWarehouse)) {
+            foreach ($photoPathsByWarehouse as $gudang => $paths) {
+                foreach ($paths as $path) {
+                    $this->consolidatedGalleryPhotos[] = [
+                        'gudang' => $gudang,
+                        'url' => \Illuminate\Support\Facades\Storage::url($path)
+                    ];
+                }
+            }
+        }
+
         $this->galleryTitle = $title;
         $this->currentGalleryIndex = 0;
-        $this->showGalleryModal = true;
+        $this->showGalleryModal = true; // Kita tetap gunakan modal galeri yang sama
     }
 
     public function closeGalleryModal()
@@ -165,7 +178,7 @@ class TripTable extends Component
 
     public function nextGalleryPhoto()
     {
-        if ($this->currentGalleryIndex < count($this->galleryPhotos) - 1) {
+        if ($this->currentGalleryIndex < count($this->consolidatedGalleryPhotos) - 1) {
             $this->currentGalleryIndex++;
         }
     }
@@ -199,9 +212,65 @@ class TripTable extends Component
             "{$photoType}_verified_at" => now(),
             "{$photoType}_rejection_reason" => null,
         ]);
+        $this->updateTripProgress($trip->fresh());
         $this->updateTripStatus($trip->fresh());
 
         session()->flash('message', 'Photo has been approved.');
+    }
+
+    /**
+     * Memperbarui status_lokasi dan status_muatan berdasarkan foto yang sudah diapprove.
+     */
+    private function updateTripProgress(Trip $trip)
+    {
+        // Tahap 1: Mulai Perjalanan
+        if ($trip->start_km_photo_status === 'approved' && $trip->status_lokasi === null) {
+            $trip->update(['status_lokasi' => 'menuju lokasi muat', 'status_muatan' => 'kosong']);
+        }
+
+        // Tahap 2: Proses Muat
+        if (
+            $trip->km_muat_photo_status === 'approved' &&
+            $trip->kedatangan_muat_photo_status === 'approved' &&
+            $trip->delivery_order_photo_status === 'approved' &&
+            $trip->status_muatan === 'kosong'
+        ) {
+            $trip->update(['status_muatan' => 'proses muat']);
+        }
+
+        // Tahap 3: Selesai Muat
+        if ($trip->muat_photo_status === 'approved' && $trip->status_muatan === 'proses muat') {
+            $trip->update(['status_muatan' => 'selesai muat']);
+        }
+
+        // Tahap 4: Menuju Lokasi Bongkar
+        if (
+            $trip->delivery_letter_initial_status === 'approved' &&
+            $trip->timbangan_kendaraan_photo_status === 'approved' &&
+            $trip->segel_photo_status === 'approved' &&
+            $trip->status_lokasi === 'di lokasi muat'
+        ) {
+            $trip->update(['status_lokasi' => 'menuju lokasi bongkar']);
+        }
+
+        // Tahap 5: Proses Bongkar
+        if (
+            $trip->end_km_photo_status === 'approved' &&
+            $trip->kedatangan_bongkar_photo_status === 'approved' &&
+            $trip->status_lokasi === 'di lokasi bongkar'
+        ) {
+            $trip->update(['status_muatan' => 'proses bongkar']);
+        }
+
+        // Tahap 6: Selesai Bongkar
+        if ($trip->bongkar_photo_status === 'approved' && $trip->status_muatan === 'proses bongkar') {
+            $trip->update(['status_muatan' => 'selesai bongkar']);
+        }
+
+        // Tahap 7: Trip Selesai (Finalisasi)
+        if ($trip->delivery_letter_final_status === 'approved' && $trip->status_muatan === 'selesai bongkar') {
+            $trip->update(['status_lokasi' => null, 'status_muatan' => null]);
+        }
     }
 
     /**
@@ -211,10 +280,18 @@ class TripTable extends Component
     {
         // 1. Definisikan semua jenis foto yang WAJIB ada agar trip dianggap 'selesai'
         $mandatoryPhotos = [
-            'start_km_photo', 'km_muat_photo', 'kedatangan_muat_photo',
-            'delivery_order_photo', 'muat_photo', 'timbangan_kendaraan_photo',
-            'segel_photo', 'end_km_photo', 'kedatangan_bongkar_photo',
-            'bongkar_photo', 'delivery_letter_initial', 'delivery_letter_final'
+            'start_km_photo',
+            'km_muat_photo',
+            'kedatangan_muat_photo',
+            'delivery_order_photo',
+            'muat_photo',
+            'timbangan_kendaraan_photo',
+            'segel_photo',
+            'end_km_photo',
+            'kedatangan_bongkar_photo',
+            'bongkar_photo',
+            'delivery_letter_initial',
+            'delivery_letter_final'
         ];
 
         $statuses = [];
@@ -335,7 +412,6 @@ class TripTable extends Component
 
     public function openModal()
     {
-        $this->resetInputFields();
         $this->showModal = true;
     }
 
@@ -353,6 +429,9 @@ class TripTable extends Component
         $this->jenisTrip = 'muatan perusahan'; // Reset jenis trip
         $this->slot_time = null;
         $this->jenis_berat = 'CDDL';
+
+        $this->jumlah_gudang_muat = 1;
+        $this->jumlah_gudang_bongkar = 1;
 
         $this->origin_address = '';
         $this->origin_link = '';
@@ -451,6 +530,9 @@ class TripTable extends Component
             'slot_time' => 'required|date_format:H:i',
             'jenis_berat' => 'required|in:CDDL,CDDS,CDE',
 
+            'jumlah_gudang_muat' => 'required|integer|min:1',
+            'jumlah_gudang_bongkar' => 'required|integer|min:1',
+
             'origin_address' => 'required|string|max:255',
             'origin_link' => 'required|url',
             'destination_address' => 'required|string|max:255',
@@ -465,6 +547,8 @@ class TripTable extends Component
             'jenis_trip' => $this->jenisTrip,
             'slot_time' => $this->slot_time,
             'jenis_berat' => $this->jenis_berat,
+            'jumlah_gudang_muat' => $this->jumlah_gudang_muat,
+            'jumlah_gudang_bongkar' => $this->jumlah_gudang_bongkar,
             'origin' => [
                 'address' => $this->origin_address,
                 'link' => $this->origin_link,
@@ -496,6 +580,9 @@ class TripTable extends Component
         $this->jenisTrip = $trip->jenis_trip; // Load jenis trip
         $this->slot_time = $trip->slot_time;
         $this->jenis_berat = $trip->getAttribute('jenis_berat');
+
+        $this->jumlah_gudang_muat = $trip->jumlah_gudang_muat;
+        $this->jumlah_gudang_bongkar = $trip->jumlah_gudang_bongkar;
 
         $origin = is_string($trip->origin) ? json_decode($trip->origin, true) : $trip->origin;
         $destination = is_string($trip->destination) ? json_decode($trip->destination, true) : $trip->destination;

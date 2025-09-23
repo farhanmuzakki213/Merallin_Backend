@@ -48,6 +48,8 @@ class BbmKendaraan extends Model
      * Atribut yang harus di-cast ke tipe data tertentu.
      */
     protected $casts = [
+        'user_id' => 'integer',
+        'vehicle_id' => 'integer',
         'start_km_photo_verified_at' => 'datetime',
         'end_km_photo_verified_at' => 'datetime',
         'nota_pengisian_photo_verified_at' => 'datetime',

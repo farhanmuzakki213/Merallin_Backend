@@ -25,6 +25,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255'],
+            'nik' => ['sometimes', 'string', 'digits:16', Rule::unique('users')->ignore($this->user()->id)],
             'alamat' => 'nullable|string|max:255',
             'no_telepon' => 'nullable|string|max:20',
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],

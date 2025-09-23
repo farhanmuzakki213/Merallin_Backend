@@ -22,6 +22,13 @@ class Attendance extends Model
         'status_absensi',
     ];
 
+    /**
+     * Atribut yang harus di-cast ke tipe data tertentu.
+     */
+    protected $casts = [
+        'user_id' => 'integer',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

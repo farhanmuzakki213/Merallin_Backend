@@ -24,7 +24,7 @@ class StoreLemburRequest extends FormRequest
     {
         return [
             'jenis_hari'        => 'required|in:Kerja,Libur,Libur Nasional',
-            'department'        => 'required|in:IT,Marketing',
+            'department'        => 'required|in:Finance,HRD,IT,Admin,Manager Operasional',
             'tanggal_lembur'    => 'required|date',
             'keterangan_lembur' => 'required|string',
             'mulai_jam_lembur'  => 'required|date_format:H:i',

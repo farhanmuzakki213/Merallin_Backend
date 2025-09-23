@@ -37,9 +37,10 @@
                         <div class="col-span-2 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortBy('user.name')">Karyawan</div>
                         <div class="col-span-2 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortBy('tanggal_lembur')">Tanggal</div>
                         <div class="col-span-1 border-r p-3 dark:border-gray-800">Jadwal</div>
-                        <div class="col-span-3 border-r p-3 dark:border-gray-800">Keterangan</div>
+                        <div class="col-span-2 border-r p-3 dark:border-gray-800">Keterangan</div>
                         <div class="col-span-3 border-r p-3 dark:border-gray-800">Status Persetujuan</div>
-                        <div class="col-span-1 p-3">Aksi</div>
+                        <div class="col-span-1 border-r p-3 dark:border-gray-800">File SPKL</div>
+                        <div class="col-span-1 p-3">Template SPKL</div>
                     </div>
 
                     {{-- Body Tabel --}}
@@ -64,12 +65,22 @@
                                 {{ \Carbon\Carbon::parse($lembur->mulai_jam_lembur)->format('H:i') }} - {{ \Carbon\Carbon::parse($lembur->selesai_jam_lembur)->format('H:i') }}
                             </div>
                             {{-- Keterangan --}}
-                            <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800 whitespace-normal">
+                            <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800 whitespace-normal">
                                 {{ $lembur->keterangan_lembur ?? '-' }}
                             </div>
                             {{-- Status Persetujuan --}}
                             <div class="col-span-3 space-y-2 border-r p-3 dark:border-gray-800">
                                 @include('livewire.lemburTable.lembur-status', ['lembur' => $lembur])
+                            </div>
+                            {{-- File Final --}}
+                            <div class="col-span-1 flex items-center justify-center border-r p-3 dark:border-gray-800">
+                                @if ($lembur->file_path)
+                                    <a href="{{ asset('storage/' . $lembur->file_path) }}" target="_blank" class="flex h-8 w-8 items-center justify-center rounded-md text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="Lihat File Final">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 lucide lucide-eye"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
+                                @else
+                                    -
+                                @endif
                             </div>
                             {{-- Aksi --}}
                             <div class="col-span-1 flex items-center justify-center p-3">
@@ -93,9 +104,78 @@
         </div>
     </div>
 
+    <div class="mt-12 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
+        <h3 class="mb-4 text-xl font-semibold text-gray-800 dark:text-white/90">Detail Pelaksanaan Lembur</h3>
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white pt-4 dark:border-gray-800 dark:bg-white/[0.03]">
+            {{-- Wrapper Tabel Detail --}}
+            <div class="max-w-full overflow-x-auto">
+                <div class="min-w-[1000px] text-sm">
+                    {{-- Header Tabel Detail --}}
+                    <div class="grid grid-cols-12 border-t border-gray-200 font-medium text-gray-700 dark:border-gray-800 dark:text-gray-400">
+                        <div class="col-span-3 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortByDetail('user.name')">Nama Karyawan</div>
+                        <div class="col-span-3 cursor-pointer border-r p-3 dark:border-gray-800" wire:click="sortByDetail('jam_mulai_aktual')">Waktu (Mulai - Selesai)</div>
+                        <div class="col-span-2 border-r p-3 dark:border-gray-800">Durasi</div>
+                        <div class="col-span-2 border-r p-3 dark:border-gray-800">Foto Absen</div>
+                        <div class="col-span-2 p-3">Status</div>
+                    </div>
+                    {{-- Body Tabel Detail --}}
+                    @forelse ($lemburDetails as $detail)
+                        <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
+                            {{-- Nama Karyawan --}}
+                            <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">{{ $detail->user->name ?? '-' }}</div>
+                            {{-- Waktu --}}
+                            <div class="col-span-3 flex items-center border-r p-3 dark:border-gray-800">
+                                Mulai : {{ $detail->jam_mulai_aktual ? \Carbon\Carbon::parse($detail->jam_mulai_aktual)->format('d/m/y H:i') : '-' }}
+                                <br>
+                                Selesai : {{ $detail->jam_selesai_aktual ? \Carbon\Carbon::parse($detail->jam_selesai_aktual)->format('d/m/y H:i') : '-' }}
+                            </div>
+                            {{-- Durasi --}}
+                            <div class="col-span-2 flex items-center border-r p-3 dark:border-gray-800">
+                                {{ $this->calculateDuration($detail->jam_mulai_aktual, $detail->jam_selesai_aktual) }}
+                            </div>
+                            {{-- Foto Absen --}}
+                            <div class="col-span-2 flex items-center gap-2 border-r p-3 dark:border-gray-800">
+                                @if ($detail->foto_mulai_path)
+                                    <button wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($detail->foto_mulai_path) }}')" class="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700 hover:bg-blue-200">Mulai</button>
+                                @endif
+                                @if ($detail->foto_selesai_path)
+                                    <button wire:click="openImageModal('{{ \Illuminate\Support\Facades\Storage::url($detail->foto_selesai_path) }}')" class="rounded bg-green-100 px-2 py-1 text-xs text-green-700 hover:bg-green-200">Selesai</button>
+                                @endif
+                            </div>
+                            {{-- Status --}}
+                            <div class="col-span-2 flex items-center p-3">
+                                @if ($detail->jam_selesai_aktual)
+                                    <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">Selesai</span>
+                                @elseif ($detail->jam_mulai_aktual)
+                                    <span class="rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-800">Berlangsung</span>
+                                @else
+                                    <span class="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">Belum Dimulai</span>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="grid grid-cols-1 border-t border-gray-100 dark:border-gray-800">
+                             <div class="col-span-12 p-5 text-center text-gray-500">
+                                Tidak ada data lembur yang disetujui atau sedang berlangsung.
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Paginasi untuk Tabel Detail --}}
+            <div class="border-t border-gray-100 py-4 px-4 dark:border-gray-800">
+                {{ $lemburDetails->links('vendor.livewire.tailwind', ['pageName' => 'detailPage']) }}
+            </div>
+        </div>
+    </div>
+
     {{-- Modal Konfirmasi Aksi --}}
     @include('livewire.lemburTable.confirm-modal')
 
     {{-- Modal Pratinjau PDF --}}
     @include('livewire.lemburTable.pdf-preview-modal')
+
+    {{-- PENAMBAHAN: Modal untuk menampilkan gambar --}}
+    @include('livewire.lemburTable.lembur-image-modal')
 </div>

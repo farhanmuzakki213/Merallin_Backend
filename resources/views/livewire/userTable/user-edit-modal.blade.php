@@ -5,7 +5,8 @@
         class="no-scrollbar relative w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 dark:bg-boxdark lg:p-8">
         <div class="flex items-center justify-between border-b pb-4 dark:border-gray-800">
             <h4 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-                Edit User: {{ $name }}
+                {{-- Edit User: {{ $name }} --}}
+                {{ $userId ? 'Edit User: ' . $name : 'Create New User' }}
             </h4>
             <button @click="$wire.closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24">
@@ -41,6 +42,14 @@
                     @enderror
                 </div>
 
+                {{-- Penambahan: NIK --}}
+                <div class="sm:col-span-2">
+                    <label for="nik" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">NIK</label>
+                    <input wire:model="nik" id="nik" type="text"
+                        class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
+                    @error('nik') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                </div>
+
                 {{-- Alamat --}}
                 <div class="sm:col-span-2">
                     <label for="alamat"
@@ -61,6 +70,20 @@
                     @error('no_telepon')
                         <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
                     @enderror
+                </div>
+
+                {{-- Penambahan: Upload ID CARD --}}
+                <div>
+                    <label for="idCardFile" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">ID Card (PDF)</label>
+                    @if ($userId && $existingIdCard)
+                        <div class="mb-2 text-sm text-gray-500">
+                            Current file: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $existingIdCard }}</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Leave empty if you don't want to change the file.</p>
+                    @endif
+                    <input wire:model="idCardFile" id="idCardFile" type="file"
+                           class="w-full rounded-lg border border-gray-300 bg-transparent text-sm file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:bg-gray-100 file:font-semibold hover:file:bg-gray-200 dark:border-gray-700 dark:bg-boxdark-2 dark:file:bg-gray-700 dark:file:text-gray-300">
+                    @error('idCardFile') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
                 </div>
 
                 {{-- Role --}}

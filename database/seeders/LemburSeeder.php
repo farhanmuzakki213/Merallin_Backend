@@ -71,7 +71,7 @@ class LemburSeeder extends Seeder
                 'selesai_jam_lembur' => $selesaiJamLembur->toTimeString(),
                 'status_lembur' => $approvalStatusOptions[array_rand($approvalStatusOptions)],
                 'persetujuan_direksi' => $approvalStatusOptions[array_rand($approvalStatusOptions)],
-                'persetujuan_manajer' => $approvalStatusOptions[array_rand($approvalStatusOptions)],
+                // 'persetujuan_manajer' => $approvalStatusOptions[array_rand($approvalStatusOptions)],
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
