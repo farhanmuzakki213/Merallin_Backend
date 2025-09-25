@@ -213,13 +213,19 @@ class LemburController extends Controller
         $path = $request->file('foto_selesai')->store('lembur_proofs', 'public');
 
         $gajiPokok = $lembur->user->gaji_pokok;
-        $jamMulai = Carbon::parse($lembur->jam_mulai_aktual);
-        $jamSelesai = now();
+        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
+        $jamSelesaiAktual = now();
+        $jamMulaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
         $jamSelesaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->selesai_jam_lembur);
-        $jamSelesaiUntukPerhitungan = $jamSelesai->min($jamSelesaiRencana);
 
-        $totalJamLembur = round($jamMulai->diffInMinutes($jamSelesaiUntukPerhitungan) / 60, 2);
+        if ($jamSelesaiRencana->lt($jamMulaiRencana)) {
+            $jamSelesaiRencana->addDay();
+        }
 
+
+        $jamSelesaiUntukPerhitungan = $jamSelesaiAktual->min($jamSelesaiRencana);
+
+        $totalJamLembur = round($jamMulaiAktual->diffInMinutes($jamSelesaiUntukPerhitungan) / 60, 2);
         if ($totalJamLembur < 0) {
             $totalJamLembur = 0;
         }
@@ -280,7 +286,7 @@ class LemburController extends Controller
             ], 422);
         }
 
-        $lembur->jam_selesai_aktual = $jamSelesai;
+        $lembur->jam_selesai_aktual = $jamSelesaiAktual;
         $lembur->foto_selesai_path = $path;
         $lembur->lokasi_selesai = [
             'latitude' => $request->latitude,
