@@ -215,7 +215,14 @@ class LemburController extends Controller
         $gajiPokok = $lembur->user->gaji_pokok;
         $jamMulai = Carbon::parse($lembur->jam_mulai_aktual);
         $jamSelesai = now();
-        $totalJamLembur = round($jamMulai->diffInMinutes($jamSelesai) / 60, 2);
+        $jamSelesaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->selesai_jam_lembur);
+        $jamSelesaiUntukPerhitungan = $jamSelesai->min($jamSelesaiRencana);
+
+        $totalJamLembur = round($jamMulai->diffInMinutes($jamSelesaiUntukPerhitungan) / 60, 2);
+
+        if ($totalJamLembur < 0) {
+            $totalJamLembur = 0;
+        }
 
         if ($gajiPokok <= 0) {
             return response()->json([
@@ -234,12 +241,12 @@ class LemburController extends Controller
                     'message' => 'Durasi lembur di hari libur minimal adalah 2 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
                 ], 422);
             }
-            if ($totalJamLembur > 5) {
-                return response()->json([
-                    'error' => 'Durasi Lembur Berlebih',
-                    'message' => 'Durasi lembur di hari libur maksimal adalah 5 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-                ], 422);
-            }
+            // if ($totalJamLembur > 5) {
+            //     return response()->json([
+            //         'error' => 'Durasi Lembur Berlebih',
+            //         'message' => 'Durasi lembur di hari libur maksimal adalah 5 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
+            //     ], 422);
+            // }
         } else {
             if ($totalJamLembur < 1) {
                 return response()->json([
@@ -247,12 +254,12 @@ class LemburController extends Controller
                     'message' => 'Durasi lembur di hari kerja minimal adalah 1 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
                 ], 422);
             }
-            if ($totalJamLembur > 3) {
-                return response()->json([
-                    'error' => 'Durasi Lembur Berlebih',
-                    'message' => 'Durasi lembur di hari kerja maksimal adalah 3 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-                ], 422);
-            }
+            // if ($totalJamLembur > 3) {
+            //     return response()->json([
+            //         'error' => 'Durasi Lembur Berlebih',
+            //         'message' => 'Durasi lembur di hari kerja maksimal adalah 3 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
+            //     ], 422);
+            // }
         }
 
         // VALIDASI 4: Cek batasan jam lembur mingguan
