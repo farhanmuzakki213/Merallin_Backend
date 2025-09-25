@@ -215,17 +215,19 @@ class LemburController extends Controller
         $gajiPokok = $lembur->user->gaji_pokok;
         $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
         $jamSelesaiAktual = now();
+        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
+        $durasiAktualDetik = $jamMulaiAktual->diffInSeconds($jamSelesaiAktual);
+
         $jamMulaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
         $jamSelesaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->selesai_jam_lembur);
-
         if ($jamSelesaiRencana->lt($jamMulaiRencana)) {
             $jamSelesaiRencana->addDay();
         }
+        $durasiRencanaDetik = $jamMulaiRencana->diffInSeconds($jamSelesaiRencana);
 
+        $durasiUntukPerhitunganDetik = min($durasiAktualDetik, $durasiRencanaDetik);
 
-        $jamSelesaiUntukPerhitungan = $jamSelesaiAktual->min($jamSelesaiRencana);
-
-        $totalJamLembur = round($jamMulaiAktual->diffInMinutes($jamSelesaiUntukPerhitungan) / 60, 2);
+        $totalJamLembur = round($durasiUntukPerhitunganDetik / 3600, 2);
         if ($totalJamLembur < 0) {
             $totalJamLembur = 0;
         }
