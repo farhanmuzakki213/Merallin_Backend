@@ -242,34 +242,6 @@ class LemburController extends Controller
         $tanggalLembur = Carbon::parse($lembur->tanggal_lembur);
         $isHariLibur = DateHelper::isNationalHoliday($tanggalLembur) || $tanggalLembur->isWeekend();
 
-        if ($isHariLibur) {
-            if ($totalJamLembur < 2) {
-                return response()->json([
-                    'error' => 'Durasi Lembur Kurang',
-                    'message' => 'Durasi lembur di hari libur minimal adalah 2 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-                ], 422);
-            }
-            // if ($totalJamLembur > 5) {
-            //     return response()->json([
-            //         'error' => 'Durasi Lembur Berlebih',
-            //         'message' => 'Durasi lembur di hari libur maksimal adalah 5 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-            //     ], 422);
-            // }
-        } else {
-            if ($totalJamLembur < 1) {
-                return response()->json([
-                    'error' => 'Durasi Lembur Kurang',
-                    'message' => 'Durasi lembur di hari kerja minimal adalah 1 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-                ], 422);
-            }
-            // if ($totalJamLembur > 3) {
-            //     return response()->json([
-            //         'error' => 'Durasi Lembur Berlebih',
-            //         'message' => 'Durasi lembur di hari kerja maksimal adalah 3 jam. Durasi Anda: ' . $totalJamLembur . ' jam.'
-            //     ], 422);
-            // }
-        }
-
         // VALIDASI 4: Cek batasan jam lembur mingguan
         $startOfWeek = $tanggalLembur->copy()->startOfWeek(Carbon::MONDAY);
         $endOfWeek = $tanggalLembur->copy()->endOfWeek(Carbon::SUNDAY);
@@ -279,14 +251,6 @@ class LemburController extends Controller
             ->where('uuid', '!=', $lembur->uuid)
             ->whereBetween('tanggal_lembur', [$startOfWeek, $endOfWeek])
             ->sum('total_jam');
-
-        if (($totalJamMingguanSebelumnya + $totalJamLembur) > 20) {
-            $sisaJam = 20 - $totalJamMingguanSebelumnya;
-            return response()->json([
-                'error' => 'Batas Lembur Mingguan Terlampaui',
-                'message' => 'Anda telah melebihi batas 20 jam lembur per minggu. Sisa kuota jam lembur Anda minggu ini adalah ' . ($sisaJam > 0 ? $sisaJam : 0) . ' jam.'
-            ], 422);
-        }
 
         $lembur->jam_selesai_aktual = $jamSelesaiAktual;
         $lembur->foto_selesai_path = $path;
