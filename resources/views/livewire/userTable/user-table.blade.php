@@ -43,7 +43,8 @@
                 <div class="flex items-center gap-3">
                     <input type="text" placeholder="Search..." wire:model.live.debounce.300ms="search"
                         class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-hidden xl:w-[300px] dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <button wire:click="openModal()" class="flex h-11 items-center justify-center whitespace-nowrap rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600">
+                    <button wire:click="openModal()"
+                        class="flex h-11 items-center justify-center whitespace-nowrap rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white hover:bg-brand-600">
                         Create User
                     </button>
                 </div>
@@ -53,20 +54,22 @@
                 <div class="min-w-[1200px]">
                     <div class="grid grid-cols-12 border-t border-gray-200 dark:border-gray-800">
                         <div
-                            class="col-span-3 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
+                            class="col-span-2 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
                             <div class="flex w-full cursor-pointer items-center justify-between"
                                 wire:click="sortBy('name')">
                                 <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">User</p>
                             </div>
                         </div>
                         {{-- PENAMBAHAN: Header Kolom NIK --}}
-                        <div class="col-span-2 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
-                            <div class="flex w-full cursor-pointer items-center justify-between" wire:click="sortBy('nik')">
+                        <div
+                            class="col-span-2 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
+                            <div class="flex w-full cursor-pointer items-center justify-between"
+                                wire:click="sortBy('nik')">
                                 <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">NIK</p>
                             </div>
                         </div>
                         <div
-                            class="col-span-3 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
+                            class="col-span-2 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
                             <div class="flex w-full cursor-pointer items-center justify-between"
                                 wire:click="sortBy('alamat')">
                                 <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">Alamat</p>
@@ -77,6 +80,13 @@
                             <div class="flex w-full cursor-pointer items-center justify-between"
                                 wire:click="sortBy('no_telepon')">
                                 <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">No. Telepon</p>
+                            </div>
+                        </div>
+                        <div
+                            class="col-span-2 flex items-center border-r border-gray-200 px-4 py-3 dark:border-gray-800">
+                            <div class="flex w-full cursor-pointer items-center justify-between"
+                                wire:click="sortBy('gaji_pokok')">
+                                <p class="text-theme-xs font-medium text-gray-700 dark:text-gray-400">Gaji Pokok</p>
                             </div>
                         </div>
                         <div
@@ -92,7 +102,7 @@
                     @forelse ($users as $user)
                         <div class="grid grid-cols-12 border-t border-gray-100 dark:border-gray-800">
                             <div
-                                class="col-span-3 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                                class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
                                 <div>
                                     <p class="text-theme-sm block font-medium text-gray-800 dark:text-white/90">
                                         {{ $user->name }}</p>
@@ -100,16 +110,27 @@
                                 </div>
                             </div>
                             {{-- PENAMBAHAN: Data Kolom NIK --}}
-                            <div class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                            <div
+                                class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
                                 <p class="text-theme-sm text-gray-700 dark:text-gray-400">{{ $user->nik ?? '-' }}</p>
                             </div>
                             <div
-                                class="col-span-3 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                                class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
                                 <p class="text-theme-sm text-gray-700 dark:text-gray-400">{{ $user->alamat ?? '-' }}</p>
                             </div>
                             <div
                                 class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
                                 <p class="text-theme-sm text-gray-700 dark:text-gray-400">{{ $user->no_telepon ?? '-' }}
+                                </p>
+                            </div>
+                            <div
+                                class="col-span-2 flex items-center border-r border-gray-100 px-4 py-3 dark:border-gray-800">
+                                <p class="text-theme-sm text-gray-700 dark:text-gray-400">
+                                    @if (isset($user->gaji_pokok))
+                                        Rp {{ number_format($user->gaji_pokok, 0, ',', '.') }}
+                                    @else
+                                        -
+                                    @endif
                                 </p>
                             </div>
                             <div
@@ -143,14 +164,18 @@
                             </div>
                             <div class="col-span-1 flex items-center px-4 py-3">
                                 <div class="flex w-full items-center gap-2">
-                                    @if($user->id_card_url)
-                                    <a href="{{ $user->file }}" target="_blank" title="Download ID Card" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">
-                                        {{-- Ikon ID Card --}}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                                        </svg>
-                                    </a>
+                                    @if ($user->id_card_url)
+                                        <a href="{{ $user->file }}" target="_blank" title="Download ID Card"
+                                            class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">
+                                            {{-- Ikon ID Card --}}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                                fill="currentColor">
+                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                <path fill-rule="evenodd"
+                                                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </a>
                                     @endif
                                     <button wire:click="edit({{ $user->id }})"
                                         class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">

@@ -30,7 +30,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'nyangnyang.ops@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '085861201909',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 15000000,
         ]);
         $manager->assignRole($role_manager);
 
@@ -39,7 +40,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'miru.direksi@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '082127309984',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 25000000,
         ]);
         $direksi->assignRole($role_direksi);
 
@@ -48,7 +50,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'rdhafin.direksi@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '082130333021',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 25000000,
         ]);
         $direksi->assignRole($role_direksi);
 
@@ -57,7 +60,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'admin@example.com',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 8000000,
         ]);
         $admin->assignRole($role_admin);
 
@@ -66,7 +70,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'farhan.it@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '081268772052',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 7500000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -75,7 +80,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'zidhan.it@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '083187407180',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 7500000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -84,7 +90,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'rifko.adm@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '081365121468',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 5000000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -93,7 +100,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'ageng.adm@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '0895616031287',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 5000000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -102,7 +110,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'razi.desain@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '085271339592',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 6000000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -111,7 +120,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'fadlan.desain@merallin.group',
             'alamat' => 'Jl. Merdeka No. 1, Bandung',
             'no_telepon' => '083168667549',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 6000000,
         ]);
         $karyawan->assignRole($role_karyawan);
 
@@ -121,7 +131,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'driver1@example.com',
             'alamat' => 'Jl. Sudirman No. 2, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 4500000,
         ]);
         $driver1->assignRole($role_driver);
         $driver2 = User::factory()->create([
@@ -129,7 +140,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'driver2@example.com',
             'alamat' => 'Jl. Sudirman No. 2, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 4500000,
         ]);
         $driver2->assignRole($role_driver);
         $driver3 = User::factory()->create([
@@ -137,7 +149,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'driver3@example.com',
             'alamat' => 'Jl. Sudirman No. 2, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 4500000,
         ]);
         $driver3->assignRole($role_driver);
         $driver4 = User::factory()->create([
@@ -145,7 +158,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'driver4@example.com',
             'alamat' => 'Jl. Sudirman No. 2, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 4500000,
         ]);
         $driver4->assignRole($role_driver);
         $driver5 = User::factory()->create([
@@ -153,7 +167,8 @@ class UserRoleSeeder extends Seeder
             'email' => 'driver5@example.com',
             'alamat' => 'Jl. Sudirman No. 2, Bandung',
             'no_telepon' => '081234567002',
-            'password' => Hash::make('password')
+            'password' => Hash::make('password'),
+            'gaji_pokok' => 4500000,
         ]);
         $driver5->assignRole($role_driver);
     }

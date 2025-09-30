@@ -153,12 +153,15 @@ class TripController extends Controller
     public function updateStart(Request $request, Trip $trip)
     {
         $busyOnTrips = Trip::where('status_trip', '!=', 'selesai')
+            ->whereNotNull('vehicle_id')
             ->pluck('vehicle_id');
 
         $busyOnLocations = VehicleLocation::where('status_vehicle_location', '!=', 'selesai')
+            ->whereNotNull('vehicle_id')
             ->pluck('vehicle_id');
 
         $busyOnBbm = BbmKendaraan::where('status_bbm_kendaraan', '!=', 'selesai')
+            ->whereNotNull('vehicle_id')
             ->pluck('vehicle_id');
 
         $busyVehicleIds = $busyOnTrips

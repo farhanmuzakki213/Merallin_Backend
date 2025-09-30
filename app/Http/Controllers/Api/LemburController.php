@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\LemburResource;
 use App\Http\Requests\StoreLemburRequest;
+use App\Helpers\DateHelper;
 
 class LemburController extends Controller
 {
@@ -35,10 +36,9 @@ class LemburController extends Controller
             }
 
             return response()->json([
-            'success' => true,
-            'data' => $lembur,
-        ]);
-
+                'success' => true,
+                'data' => $lembur,
+            ]);
         } catch (\Exception $e) {
             // Log the exception for debugging
             Log::error('Error fetching lembur data: ' . $e->getMessage());
@@ -97,10 +97,7 @@ class LemburController extends Controller
             'file_final_url' => null // Default null
         ];
 
-        // Cek jika status final adalah "Diterima" dan ada file_path
         if ($lembur->status_lembur === 'Diterima' && !empty($lembur->file_path)) {
-            // Gunakan accessor 'file_url' yang aman dari Model Lembur
-            // Ini akan menghasilkan URL ke controller unduhan, bukan link langsung
             $responseData['file_final_url'] = $lembur->file_url;
         }
 
@@ -136,28 +133,36 @@ class LemburController extends Controller
 
         $totalHoursThisWeek = $totalSecondsThisWeek / 3600;
 
-        if ($totalHoursThisWeek >= 10) {
-            return response()->json(['message' => 'Gagal: Anda telah melebihi kuota lembur 10 jam minggu ini.'], 422);
+        if ($totalHoursThisWeek >= 20) {
+            return response()->json(['message' => 'Gagal: Anda telah melebihi kuota lembur 20 jam minggu ini.'], 422);
         }
 
         // ===== VALIDASI 2: WAKTU DAN TANGGAL MULAI LEMBUR =====
         $now = now();
-        $scheduledDate = Carbon::parse($lembur->tanggal_lembur)->toDateString();
+        $scheduledDate = Carbon::parse($lembur->tanggal_lembur);
         $scheduledStartTime = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
 
         // Cek apakah hari ini adalah tanggal lembur yang dijadwalkalkan
-        if ($now->toDateString() !== $scheduledDate) {
-            return response()->json(['message' => 'Gagal: Anda hanya bisa memulai lembur pada tanggal yang dijadwalkan (' . $scheduledDate . ').'], 422);
+        if ($now->toDateString() !== $scheduledDate->toDateString()) {
+            // FORMAT TANGGAL SEBELUM DIKIRIM KE JSON
+            $formattedScheduledDate = $scheduledDate->translatedFormat('d F Y');
+            return response()->json([
+                'message' => 'Gagal: Anda hanya bisa memulai lembur pada tanggal yang dijadwalkan (' . $formattedScheduledDate . ').'
+            ], 422);
         }
 
         // Cek apakah sudah melewati jam mulai yang dijadwalkan
         if ($now->isBefore($scheduledStartTime)) {
-            return response()->json(['message' => 'Gagal: Anda belum bisa memulai lembur. Jadwal mulai: ' . $scheduledStartTime->format('H:i') . '.'], 422);
+            // FORMAT WAKTU SEBELUM DIKIRIM KE JSON
+            $formattedScheduledTime = $scheduledStartTime->format('H:i');
+            return response()->json([
+                'message' => 'Gagal: Anda belum bisa memulai lembur. Jadwal mulai: ' . $formattedScheduledTime . ' WIB.'
+            ], 422);
         }
 
         // Validasi: Pastikan statusnya Diterima dan belum pernah clock-in
         if ($lembur->status_lembur !== 'Diterima' || $lembur->jam_mulai_aktual !== null) {
-            return response()->json(['message' => 'Lembur tidak bisa dimulai atau sudah dimulai.'], 422);
+            return response()->json(['message' => 'Lembur belum bisa dimulai.'], 422);
         }
 
         $request->validate([
@@ -191,12 +196,12 @@ class LemburController extends Controller
      */
     public function clockOut(Request $request, Lembur $lembur): JsonResponse
     {
-        // Keamanan & Validasi
-        if (Auth::id() !== $lembur->user_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if ($lembur->jam_selesai_aktual) {
+            return response()->json(['message' => 'Anda sudah melakukan clock-out untuk lembur ini.'], 400);
         }
-        if ($lembur->jam_mulai_aktual === null || $lembur->jam_selesai_aktual !== null) {
-            return response()->json(['message' => 'Lembur tidak bisa diselesaikan.'], 422);
+
+        if (!$lembur->jam_mulai_aktual) {
+            return response()->json(['message' => 'Clock-in belum dilakukan. Tidak bisa melakukan clock-out.'], 400);
         }
 
         $request->validate([
@@ -207,14 +212,59 @@ class LemburController extends Controller
 
         $path = $request->file('foto_selesai')->store('lembur_proofs', 'public');
 
-        $lembur->update([
-            'jam_selesai_aktual' => now(),
-            'foto_selesai_path' => $path,
-            'lokasi_selesai' => [
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-            ],
-        ]);
+        $gajiPokok = $lembur->user->gaji_pokok;
+        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
+        $jamSelesaiAktual = now();
+        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
+        $durasiAktualDetik = $jamMulaiAktual->diffInSeconds($jamSelesaiAktual);
+
+        $jamMulaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
+        $jamSelesaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->selesai_jam_lembur);
+        if ($jamSelesaiRencana->lt($jamMulaiRencana)) {
+            $jamSelesaiRencana->addDay();
+        }
+        $durasiRencanaDetik = $jamMulaiRencana->diffInSeconds($jamSelesaiRencana);
+
+        $durasiUntukPerhitunganDetik = min($durasiAktualDetik, $durasiRencanaDetik);
+
+        $totalJamLembur = round($durasiUntukPerhitunganDetik / 3600, 2);
+        if ($totalJamLembur < 0) {
+            $totalJamLembur = 0;
+        }
+
+        if ($gajiPokok <= 0) {
+            return response()->json([
+                'error' => 'Gaji Pokok Tidak Ditemukan',
+                'message' => 'Perhitungan gaji lembur tidak dapat dilakukan karena data gaji pokok tidak valid.'
+            ], 422);
+        }
+
+        $tanggalLembur = Carbon::parse($lembur->tanggal_lembur);
+        $isHariLibur = DateHelper::isNationalHoliday($tanggalLembur) || $tanggalLembur->isWeekend();
+
+        // VALIDASI 4: Cek batasan jam lembur mingguan
+        $startOfWeek = $tanggalLembur->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfWeek = $tanggalLembur->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $totalJamMingguanSebelumnya = Lembur::where('user_id', $lembur->user_id)
+            ->where('status_lembur', 'Diterima')
+            ->where('uuid', '!=', $lembur->uuid)
+            ->whereBetween('tanggal_lembur', [$startOfWeek, $endOfWeek])
+            ->sum('total_jam');
+
+        $lembur->jam_selesai_aktual = $jamSelesaiAktual;
+        $lembur->foto_selesai_path = $path;
+        $lembur->lokasi_selesai = [
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+        ];
+        $lembur->total_jam = $totalJamLembur;
+        $pengali = $isHariLibur ? 2 : 1.5;
+        $gajiPerJam = $gajiPokok / 173;
+        $gajiLembur = $gajiPerJam * $pengali * $totalJamLembur;
+        $lembur->gaji_lembur = round($gajiLembur, 2);
+
+        $lembur->save();
 
         return response()->json([
             'success' => true,

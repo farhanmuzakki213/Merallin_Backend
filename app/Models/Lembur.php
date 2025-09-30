@@ -36,20 +36,20 @@ class Lembur extends Model
         'mulai_jam_lembur',
         'selesai_jam_lembur',
         'status_lembur',
-        // 'persetujuan_manajer',
         'persetujuan_direksi',
         'alasan',
         'uuid',
         'file_path',
 
-        // --- PENAMBAHAN DI SINI ---
         'jam_mulai_aktual',
         'foto_mulai_path',
         'lokasi_mulai',
         'jam_selesai_aktual',
         'foto_selesai_path',
         'lokasi_selesai',
-        // --- AKHIR PENAMBAHAN DI SINI ---
+
+        'total_jam',
+        'gaji_lembur',
     ];
 
     protected $appends = [

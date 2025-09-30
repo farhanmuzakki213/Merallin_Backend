@@ -44,10 +44,13 @@
 
                 {{-- Penambahan: NIK --}}
                 <div class="sm:col-span-2">
-                    <label for="nik" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">NIK</label>
+                    <label for="nik"
+                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">NIK</label>
                     <input wire:model="nik" id="nik" type="text"
                         class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm focus:border-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-boxdark-2 dark:focus:border-brand-500">
-                    @error('nik') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                    @error('nik')
+                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 {{-- Alamat --}}
@@ -74,16 +77,20 @@
 
                 {{-- Penambahan: Upload ID CARD --}}
                 <div>
-                    <label for="idCardFile" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">ID Card (PDF)</label>
+                    <label for="idCardFile" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">ID
+                        Card (PDF)</label>
                     @if ($userId && $existingIdCard)
                         <div class="mb-2 text-sm text-gray-500">
-                            Current file: <span class="font-medium text-gray-700 dark:text-gray-300">{{ $existingIdCard }}</span>
+                            Current file: <span
+                                class="font-medium text-gray-700 dark:text-gray-300">{{ $existingIdCard }}</span>
                         </div>
                         <p class="text-xs text-gray-400">Leave empty if you don't want to change the file.</p>
                     @endif
                     <input wire:model="idCardFile" id="idCardFile" type="file"
-                           class="w-full rounded-lg border border-gray-300 bg-transparent text-sm file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:bg-gray-100 file:font-semibold hover:file:bg-gray-200 dark:border-gray-700 dark:bg-boxdark-2 dark:file:bg-gray-700 dark:file:text-gray-300">
-                    @error('idCardFile') <span class="mt-1 text-xs text-red-500">{{ $message }}</span> @enderror
+                        class="w-full rounded-lg border border-gray-300 bg-transparent text-sm file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:bg-gray-100 file:font-semibold hover:file:bg-gray-200 dark:border-gray-700 dark:bg-boxdark-2 dark:file:bg-gray-700 dark:file:text-gray-300">
+                    @error('idCardFile')
+                        <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 {{-- Role --}}
@@ -101,6 +108,17 @@
                     </div>
                     @error('userRoles')
                         <span class="mt-1 text-xs text-red-500">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                {{-- Gaji Pokok --}}
+                <div class="mb-4">
+                    <label for="gaji_pokok" class="mb-2.5 block font-medium text-black dark:text-white">Gaji
+                        Pokok</label>
+                    <input type="number" id="gaji_pokok" wire:model.defer="gaji_pokok"
+                        class="w-full rounded-lg border border-stroke bg-transparent py-4 pl-6 pr-10 outline-none focus:border-primary focus-visible:shadow-none dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary">
+                    @error('gaji_pokok')
+                        <span class="text-red-500 text-sm">{{ $message }}</span>
                     @enderror
                 </div>
 

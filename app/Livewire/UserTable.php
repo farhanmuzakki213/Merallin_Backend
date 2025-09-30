@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,7 +30,7 @@ class UserTable extends Component
     // Properti untuk Modal
     public $showModal = false;
     public $userId;
-    public $name, $email, $alamat, $no_telepon, $nik;
+    public $name, $email, $alamat, $no_telepon, $nik, $gaji_pokok;
     public $password, $password_confirmation;
     public $userRoles = [];
     public $allRoles;
@@ -92,8 +93,9 @@ class UserTable extends Component
             'alamat' => 'nullable|string|max:500',
             'no_telepon' => 'nullable|string|max:15',
             'userRoles' => 'required|array|min:1',
+            'gaji_pokok' => 'sometimes|numeric|min:0',
             'password' => [$this->userId ? 'nullable' : 'required', 'min:8', 'confirmed'],
-            'idCardFile' => [$this->userId ? 'nullable' : 'required', 'file', 'mimes:pdf', 'max:2048'],
+            'idCardFile' => [$this->userId ? 'nullable' : 'sometimes', 'file', 'mimes:pdf', 'max:2048'],
         ]);
 
         $data = [
@@ -103,6 +105,10 @@ class UserTable extends Component
             'alamat' => $this->alamat,
             'no_telepon' => $this->no_telepon,
         ];
+
+        if (!empty($this->gaji_pokok)) {
+            $data['gaji_pokok'] = $this->gaji_pokok;
+        }
 
         if (!empty($this->password)) {
             $data['password'] = Hash::make($this->password);
@@ -137,6 +143,7 @@ class UserTable extends Component
         $this->no_telepon = $user->no_telepon;
         $this->userRoles = $user->getRoleNames()->toArray();
         $this->existingIdCard = $user->original_id_card_name;
+        $this->gaji_pokok = $user->gaji_pokok;
         $this->idCardFile = null;
         $this->resetErrorBag();
         $this->showModal = true;
@@ -161,15 +168,17 @@ class UserTable extends Component
     // Mengikuti pola TripTable
     public function render()
     {
+        $searchTerm = strtolower($this->search);
         $users = User::with('roles')
-            ->where(function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('email', 'like', '%' . $this->search . '%')
-                    ->orWhere('nik', 'like', '%' . $this->search . '%')
-                    ->orWhere('alamat', 'like', '%' . $this->search . '%')
+            ->where(function ($query) use ($searchTerm) {
+                $query->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(email)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(nik)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('LOWER(alamat)'), 'like', '%' . $searchTerm . '%')
                     ->orWhere('no_telepon', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('roles', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+                    ->orWhere('gaji_pokok', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('roles', function ($q) use ($searchTerm) {
+                        $q->where(DB::raw('LOWER(name)'), 'like', '%' . $searchTerm . '%');
                     });
             })
             ->orderBy($this->sortField, $this->sortDirection)

@@ -627,29 +627,31 @@ class TripTable extends Component
 
     public function render()
     {
+        $searchTerm = strtolower($this->search);
         $trips = Trip::with('user', 'vehicle')
-            ->where(function ($query) {
-                $query->where('project_name', 'like', '%' . $this->search . '%')
-                    ->orWhere('origin', 'like', '%' . $this->search . '%')
-                    ->orWhere('destination', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('user', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+            ->where(function ($query) use ($searchTerm) {
+                $query->where(DB::raw('(project_name)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('(origin)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhere(DB::raw('(destination)'), 'like', '%' . $searchTerm . '%')
+                    ->orWhereHas('user', function ($q) use ($searchTerm) {
+                        $q->where(DB::raw('(name)'), 'like', '%' . $searchTerm . '%');
                     });
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
+            $searchDetailTerm = strtolower($this->detailSearch);
         $detailTripsQuery = Trip::with('user', 'vehicle')
-            ->where(function ($query) {
-                $query->where('project_name', 'like', '%' . $this->detailSearch . '%')
-                    ->orWhere('origin', 'like', '%' . $this->detailSearch . '%')
-                    ->orWhere('destination', 'like', '%' . $this->detailSearch . '%')
-                    ->orWhere('status_trip', 'like', '%' . $this->detailSearch . '%')
-                    ->orWhereHas('user', function ($q) {
-                        $q->where('name', 'like', '%' . $this->detailSearch . '%');
+            ->where(function ($query) use ($searchDetailTerm) {
+                $query->where(DB::raw('(project_name)'), 'like', '%' . $searchDetailTerm . '%')
+                    ->orWhere(DB::raw('(origin)'), 'like', '%' . $searchDetailTerm . '%')
+                    ->orWhere(DB::raw('(destination)'), 'like', '%' . $searchDetailTerm . '%')
+                    ->orWhere(DB::raw('(status_trip)'), 'like', '%' . $searchDetailTerm . '%')
+                    ->orWhereHas('user', function ($q) use ($searchDetailTerm) {
+                        $q->where(DB::raw('(name)'), 'like', '%' . $searchDetailTerm . '%');
                     })
-                    ->orWhereHas('vehicle', function ($q) {
-                        $q->where('license_plate', 'like', '%' . $this->detailSearch . '%');
+                    ->orWhereHas('vehicle', function ($q) use ($searchDetailTerm) {
+                        $q->where(DB::raw('(license_plate)'), 'like', '%' . $searchDetailTerm . '%');
                     });
             })->whereIn('status_trip', ['proses', 'selesai', 'revisi gambar', 'verifikasi gambar']);
 
