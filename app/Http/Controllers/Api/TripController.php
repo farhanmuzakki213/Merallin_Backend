@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdateRejectedPhotoRequest;
 use App\Models\Trip;
 use App\Models\Vehicle;
 use App\Models\VehicleLocation;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -21,8 +19,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
-use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\PushSubscription;
 
 class TripController extends Controller
 {
@@ -308,17 +304,15 @@ class TripController extends Controller
             $firstPhotoPath = null;
             // Loop akan secara otomatis menjadikan inputan user sebagai $gudang (key)
             foreach ($request->file('muat_photo') as $gudang => $files) {
-                if (isset($muatData[$gudang]) && is_array($muatData[$gudang])) {
-                    Storage::disk('public')->delete($muatData[$gudang]);
-                }
-                $gudangPaths = [];
+                $existingPaths = $muatData[$gudang] ?? [];
+                $newPaths = [];
                 foreach ($files as $file) {
                     $fileName = $this->generateUniqueFileName($file);
                     $path = $file->storeAs('trip_photos/muat_photo', $fileName, 'public');
-                    $gudangPaths[] = $path;
+                    $newPaths[] = $path;
                     if (!$firstPhotoPath) $firstPhotoPath = $path;
                 }
-                $muatData[$gudang] = $gudangPaths;
+                $muatData[$gudang] = array_merge($existingPaths, $newPaths);
             }
             $trip->muat_photo_path = $muatData;
 
@@ -500,17 +494,15 @@ class TripController extends Controller
             $firstPhotoPath = null;
             // Loop akan secara otomatis menjadikan inputan user sebagai $gudang (key)
             foreach ($request->file('bongkar_photo') as $gudang => $files) {
-                if (isset($bongkarData[$gudang]) && is_array($bongkarData[$gudang])) {
-                    Storage::disk('public')->delete($bongkarData[$gudang]);
-                }
-                $gudangPaths = [];
+                $existingPaths = $bongkarData[$gudang] ?? [];
+                $newPaths = [];
                 foreach ($files as $file) {
                     $fileName = $this->generateUniqueFileName($file);
                     $path = $file->storeAs('trip_photos/bongkar_photo', $fileName, 'public');
-                    $gudangPaths[] = $path;
+                    $newPaths[] = $path;
                     if (!$firstPhotoPath) $firstPhotoPath = $path;
                 }
-                $bongkarData[$gudang] = $gudangPaths;
+                $bongkarData[$gudang] = array_merge($existingPaths, $newPaths);
             }
             $trip->bongkar_photo_path = $bongkarData;
 

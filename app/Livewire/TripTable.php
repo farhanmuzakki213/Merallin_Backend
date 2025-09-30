@@ -15,6 +15,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\VehicleLocation;
+use Illuminate\Support\Facades\Storage;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -69,6 +70,9 @@ class TripTable extends Component
     public $jumlah_gudang_bongkar = 1;
 
     public $consolidatedGalleryPhotos = [];
+    public $galleryTripId;
+    public $galleryPhotoType;
+
 
     /**
      * Mengekstrak koordinat (latitude, longitude) dari URL Google Maps.
@@ -138,6 +142,9 @@ class TripTable extends Component
         return Excel::download(new TripUserReportExport($dataForExport), $fileName);
     }
 
+    /**
+     * Fungsi untuk menampilkan foto dari galeri muat/bongkar.
+     */
     public function openConsolidatedGalleryModal($tripId, $photoType)
     {
         $trip = Trip::findOrFail($tripId);
@@ -152,13 +159,17 @@ class TripTable extends Component
             $title = 'Galeri Foto Bongkar';
         }
 
+        $this->galleryTripId = $tripId;
+        $this->galleryPhotoType = $photoType;
+
         $this->consolidatedGalleryPhotos = [];
         if (is_array($photoPathsByWarehouse)) {
             foreach ($photoPathsByWarehouse as $gudang => $paths) {
                 foreach ($paths as $path) {
                     $this->consolidatedGalleryPhotos[] = [
                         'gudang' => $gudang,
-                        'url' => \Illuminate\Support\Facades\Storage::url($path)
+                        'url' => \Illuminate\Support\Facades\Storage::url($path),
+                        'path' => $path,
                     ];
                 }
             }
@@ -166,7 +177,58 @@ class TripTable extends Component
 
         $this->galleryTitle = $title;
         $this->currentGalleryIndex = 0;
-        $this->showGalleryModal = true; // Kita tetap gunakan modal galeri yang sama
+        $this->showGalleryModal = true;
+    }
+
+    /**
+     * Fungsi untuk menghapus foto dari galeri muat/bongkar.
+     */
+    public function deleteGalleryPhoto($indexToDelete)
+    {
+        if (!isset($this->consolidatedGalleryPhotos[$indexToDelete])) {
+            session()->flash('error', 'Foto tidak ditemukan untuk dihapus.');
+            return;
+        }
+
+        DB::beginTransaction();
+        try {
+            $photoData = $this->consolidatedGalleryPhotos[$indexToDelete];
+            $pathToDelete = $photoData['path'];
+            $trip = Trip::findOrFail($this->galleryTripId);
+
+            $photoField = $this->galleryPhotoType === 'muat' ? 'muat_photo_path' : 'bongkar_photo_path';
+            $allPhotos = $trip->{$photoField} ?? [];
+
+            $updatedPhotos = [];
+            foreach ($allPhotos as $gudang => $paths) {
+                $filteredPaths = array_filter($paths, fn ($path) => $path !== $pathToDelete);
+                if (!empty($filteredPaths)) {
+                    $updatedPhotos[$gudang] = array_values($filteredPaths);
+                }
+            }
+
+            Storage::disk('public')->delete($pathToDelete);
+
+            $trip->{$photoField} = $updatedPhotos;
+            $trip->save();
+
+            array_splice($this->consolidatedGalleryPhotos, $indexToDelete, 1);
+
+            if ($this->currentGalleryIndex >= count($this->consolidatedGalleryPhotos)) {
+                $this->currentGalleryIndex = max(0, count($this->consolidatedGalleryPhotos) - 1);
+            }
+
+            if (empty($this->consolidatedGalleryPhotos)) {
+                $this->closeGalleryModal();
+            }
+
+            DB::commit();
+            session()->flash('message', 'Foto berhasil dihapus.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            session()->flash('error', 'Gagal menghapus foto: ' . $e->getMessage());
+            $this->closeGalleryModal();
+        }
     }
 
     public function closeGalleryModal()
