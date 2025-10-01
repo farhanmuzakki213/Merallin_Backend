@@ -199,66 +199,63 @@ class LemburController extends Controller
         if ($lembur->jam_selesai_aktual) {
             return response()->json(['message' => 'Anda sudah melakukan clock-out untuk lembur ini.'], 400);
         }
-
         if (!$lembur->jam_mulai_aktual) {
             return response()->json(['message' => 'Clock-in belum dilakukan. Tidak bisa melakukan clock-out.'], 400);
         }
 
         $request->validate([
             'foto_selesai' => 'required|image|mimes:jpg,jpeg,png|max:2048',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'latitude'     => 'required|numeric',
+            'longitude'    => 'required|numeric',
         ]);
 
-        $path = $request->file('foto_selesai')->store('lembur_proofs', 'public');
-
         $gajiPokok = $lembur->user->gaji_pokok;
-        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
-        $jamSelesaiAktual = now();
-        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
-        $durasiAktualDetik = $jamMulaiAktual->diffInSeconds($jamSelesaiAktual);
-
-        $jamMulaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->mulai_jam_lembur);
-        $jamSelesaiRencana = Carbon::parse($lembur->tanggal_lembur . ' ' . $lembur->selesai_jam_lembur);
-        if ($jamSelesaiRencana->lt($jamMulaiRencana)) {
-            $jamSelesaiRencana->addDay();
-        }
-        $durasiRencanaDetik = $jamMulaiRencana->diffInSeconds($jamSelesaiRencana);
-
-        $durasiUntukPerhitunganDetik = min($durasiAktualDetik, $durasiRencanaDetik);
-
-        $totalJamLembur = round($durasiUntukPerhitunganDetik / 3600, 2);
-        if ($totalJamLembur < 0) {
-            $totalJamLembur = 0;
-        }
-
         if ($gajiPokok <= 0) {
             return response()->json([
-                'error' => 'Gaji Pokok Tidak Ditemukan',
+                'error'   => 'Gaji Pokok Tidak Ditemukan',
                 'message' => 'Perhitungan gaji lembur tidak dapat dilakukan karena data gaji pokok tidak valid.'
             ], 422);
         }
 
-        $tanggalLembur = Carbon::parse($lembur->tanggal_lembur);
-        $isHariLibur = DateHelper::isNationalHoliday($tanggalLembur) || $tanggalLembur->isWeekend();
+        $jamMulaiAktual = Carbon::parse($lembur->jam_mulai_aktual);
+        $jamSelesaiAktual = now();
 
-        // VALIDASI 4: Cek batasan jam lembur mingguan
+        $durasiAktualJam = round($jamMulaiAktual->diffInSeconds($jamSelesaiAktual) / 3600, 2);
+
+        $tanggalLembur = Carbon::parse($lembur->tanggal_lembur);
+        $isHariLibur = $lembur->jenis_hari === 'Libur' || $lembur->jenis_hari === 'Libur Nasional';
+        $batasHarianJam = $isHariLibur ? 5 : 3;
+        $batasMinimalHarianJam = $isHariLibur ? 2 : 1;
+
+        if ($durasiAktualJam < $batasMinimalHarianJam) {
+            return response()->json([
+                'error'   => 'Durasi Lembur Kurang',
+                'message' => 'Durasi lembur di ' . ($isHariLibur ? 'hari libur' : 'hari kerja') . ' minimal adalah ' . $batasMinimalHarianJam . ' jam. Durasi Anda: ' . $durasiAktualJam . ' jam.'
+            ], 422);
+        }
+
         $startOfWeek = $tanggalLembur->copy()->startOfWeek(Carbon::MONDAY);
         $endOfWeek = $tanggalLembur->copy()->endOfWeek(Carbon::SUNDAY);
 
-        $totalJamMingguanSebelumnya = Lembur::where('user_id', $lembur->user_id)
-            ->where('status_lembur', 'Diterima')
+        $totalJamMingguanSelesai = Lembur::where('user_id', $lembur->user_id)
             ->where('uuid', '!=', $lembur->uuid)
+            ->whereNotNull('total_jam')
             ->whereBetween('tanggal_lembur', [$startOfWeek, $endOfWeek])
             ->sum('total_jam');
 
+        $sisaKuotaMingguan = max(0, 20 - $totalJamMingguanSelesai);
+
+        // Menentukan jam yang akan dihitung untuk gaji dengan menerapkan semua batasan
+        $totalJamLembur = min($durasiAktualJam, $batasHarianJam, $sisaKuotaMingguan);
+        if ($totalJamLembur < 0) $totalJamLembur = 0;
+
+        $path = $request->file('foto_selesai')->store('lembur_proofs', 'public');
+
         $lembur->jam_selesai_aktual = $jamSelesaiAktual;
         $lembur->foto_selesai_path = $path;
-        $lembur->lokasi_selesai = [
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-        ];
+        $lembur->lokasi_selesai = ['latitude' => $request->latitude, 'longitude' => $request->longitude];
         $lembur->total_jam = $totalJamLembur;
+
         $pengali = $isHariLibur ? 2 : 1.5;
         $gajiPerJam = $gajiPokok / 173;
         $gajiLembur = $gajiPerJam * $pengali * $totalJamLembur;
