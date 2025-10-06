@@ -94,19 +94,22 @@
                 </button>
             </div>
         @endif
-        @if ($photo_type === 'muat_photo' && $status !== 'pending')
-            <button wire:click="sendProsesMuatNotification({{ $trip->id }})"
-                class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-                Kirim Notifikasi "Proses Muat"
-            </button>
-        @endif
+        <div class="mt-2 text-center">
+            @if (isset($photo_type) && isset($photo_data) && $selectedTrip)
+                @if ($photo_type === 'muat' && $photo_data['status'] === 'rejected')
+                    <button wire:click="sendProsesMuatNotification({{ $selectedTrip->id }})" wire:loading.attr="disabled"
+                        class="w-full rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
+                        Kirim Notif "Proses Muat"
+                    </button>
+                @endif
 
-        {{-- Di dalam loop untuk menampilkan gambar 'bongkar_photo' --}}
-        @if ($photo_type === 'bongkar_photo' && $status !== 'pending')
-            <button wire:click="sendProsesBongkarNotification({{ $trip->id }})"
-                class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-                Kirim Notifikasi "Proses Bongkar"
-            </button>
-        @endif
+                @if ($photo_type === 'bongkar' && $photo_data['status'] === 'rejected')
+                    <button wire:click="sendProsesBongkarNotification({{ $selectedTrip->id }})" wire:loading.attr="disabled"
+                        class="w-full rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
+                        Kirim Notif "Proses Bongkar"
+                    </button>
+                @endif
+            @endif
+        </div>
     </div>
 </div>

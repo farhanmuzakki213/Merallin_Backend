@@ -74,6 +74,10 @@ class TripTable extends Component
     public $galleryTripId;
     public $galleryPhotoType;
 
+    public $selectedTrip;
+    public $photo_type;
+    public $photo_data;
+
 
     /**
      * Mengekstrak koordinat (latitude, longitude) dari URL Google Maps.
@@ -144,46 +148,6 @@ class TripTable extends Component
     }
 
     /**
-     * Mengubah status verifikasi foto dan mengirim notifikasi jika statusnya 'approved'.
-     *
-     * @param int $id
-     * @param string $photo_type
-     * @param string $status
-     * @param WhatsAppNotificationService $waNotificationService
-     */
-    public function updatePhotoStatus($id, $photo_type, $status, WhatsAppNotificationService $waNotificationService)
-    {
-        $trip = Trip::findOrFail($id);
-        $status_column = $photo_type . '_status';
-
-        $trip->update([$status_column => $status]);
-
-        // Kirim notifikasi HANYA JIKA status diubah menjadi 'approved'
-        if ($status === 'approved') {
-            switch ($photo_type) {
-                case 'kedatangan_muat_photo':
-                    // Notifikasi 1: Tiba di lokasi muat
-                    $waNotificationService->notifyKedatanganMuat($trip);
-                    break;
-                case 'muat_photo':
-                    // Notifikasi 3: Selesai muat barang
-                    $waNotificationService->notifySelesaiMuat($trip);
-                    break;
-                case 'kedatangan_bongkar_photo':
-                    // Notifikasi 4: Tiba di lokasi bongkar
-                    $waNotificationService->notifyKedatanganBongkar($trip);
-                    break;
-                case 'bongkar_photo':
-                    // Notifikasi 6: Selesai bongkar barang
-                    $waNotificationService->notifySelesaiBongkar($trip);
-                    break;
-            }
-        }
-
-        $this->dispatch('photo-status-updated');
-    }
-
-    /**
      * Metode baru untuk mengirim notifikasi proses muat secara manual.
      *
      * @param int $tripId
@@ -192,10 +156,15 @@ class TripTable extends Component
     public function sendProsesMuatNotification($tripId, WhatsAppNotificationService $waNotificationService)
     {
         $trip = Trip::findOrFail($tripId);
-        // Notifikasi 2: Sedang proses muat
-        $waNotificationService->notifyProsesMuat($trip);
-        // Beri feedback ke user di frontend
-        session()->flash('message', 'Notifikasi "Proses Muat" untuk perjalanan ' . $trip->order_id . ' telah dikirim.');
+
+        // Tangkap status pengiriman (true jika berhasil, false jika gagal)
+        $isSent = $waNotificationService->notifyProsesMuat($trip);
+
+        if ($isSent) {
+            session()->flash('message', 'Notifikasi "Proses Muat" untuk perjalanan ' . $trip->order_id . ' telah berhasil dikirim.');
+        } else {
+            session()->flash('error', 'Gagal mengirim Notifikasi "Proses Muat". Pastikan gambar sudah lengkap dan coba lagi.');
+        }
     }
 
     /**
@@ -207,10 +176,15 @@ class TripTable extends Component
     public function sendProsesBongkarNotification($tripId, WhatsAppNotificationService $waNotificationService)
     {
         $trip = Trip::findOrFail($tripId);
-        // Notifikasi 5: Sedang proses bongkar
-        $waNotificationService->notifyProsesBongkar($trip);
-        // Beri feedback ke user di frontend
-        session()->flash('message', 'Notifikasi "Proses Bongkar" untuk perjalanan ' . $trip->order_id . ' telah dikirim.');
+
+        // Tangkap status pengiriman (true jika berhasil, false jika gagal)
+        $isSent = $waNotificationService->notifyProsesBongkar($trip);
+
+        if ($isSent) {
+            session()->flash('message', 'Notifikasi "Proses Bongkar" untuk perjalanan ' . $trip->order_id . ' telah berhasil dikirim.');
+        } else {
+            session()->flash('error', 'Gagal mengirim Notifikasi "Proses Bongkar". Pastikan gambar sudah lengkap dan coba lagi.');
+        }
     }
 
     /**
@@ -229,6 +203,10 @@ class TripTable extends Component
             $photoPathsByWarehouse = $trip->bongkar_photo_path ?? [];
             $title = 'Galeri Foto Bongkar';
         }
+        $this->selectedTrip = $trip;
+        $this->photo_type = $photoType;
+        $statusField = $photoType . '_photo_status';
+        $this->photo_data = ['status' => $trip->{$statusField}];
 
         $this->galleryTripId = $tripId;
         $this->galleryPhotoType = $photoType;
@@ -272,7 +250,7 @@ class TripTable extends Component
 
             $updatedPhotos = [];
             foreach ($allPhotos as $gudang => $paths) {
-                $filteredPaths = array_filter($paths, fn ($path) => $path !== $pathToDelete);
+                $filteredPaths = array_filter($paths, fn($path) => $path !== $pathToDelete);
                 if (!empty($filteredPaths)) {
                     $updatedPhotos[$gudang] = array_values($filteredPaths);
                 }
@@ -307,6 +285,10 @@ class TripTable extends Component
         $this->showGalleryModal = false;
         $this->galleryTitle = '';
         $this->galleryPhotos = [];
+
+        $this->selectedTrip = null;
+        $this->photo_type = null;
+        $this->photo_data = null;
     }
 
     public function nextGalleryPhoto()
@@ -331,24 +313,49 @@ class TripTable extends Component
         $this->drivers = User::role('driver')->get();
     }
 
-    public function approvePhoto($tripId, $photoType)
+    /**
+     * Meng-approve foto, memperbarui database, DAN mengirim notifikasi WhatsApp.
+     *
+     * @param int $tripId
+     * @param string $photoType
+     * @param WhatsAppNotificationService $waNotificationService (Service di-inject di sini)
+     */
+    public function approvePhoto($tripId, $photoType, WhatsAppNotificationService $waNotificationService)
     {
         $trip = Trip::findOrFail($tripId);
         $statusField = "{$photoType}_status";
+
         if ($trip->{$statusField} !== 'pending') {
             session()->flash('error', 'Gagal: Gambar ini sudah diverifikasi oleh admin lain.');
             return;
         }
+
         $trip->update([
             "{$photoType}_status" => 'approved',
             "{$photoType}_verified_by" => Auth::id(),
             "{$photoType}_verified_at" => now(),
             "{$photoType}_rejection_reason" => null,
         ]);
+
+        switch ($photoType) {
+            case 'kedatangan_muat_photo':
+                $waNotificationService->notifyKedatanganMuat($trip);
+                break;
+            case 'muat_photo':
+                $waNotificationService->notifySelesaiMuat($trip);
+                break;
+            case 'kedatangan_bongkar_photo':
+                $waNotificationService->notifyKedatanganBongkar($trip);
+                break;
+            case 'bongkar_photo':
+                $waNotificationService->notifySelesaiBongkar($trip);
+                break;
+        }
+
         $this->updateTripProgress($trip->fresh());
         $this->updateTripStatus($trip->fresh());
 
-        session()->flash('message', 'Photo has been approved.');
+        session()->flash('message', 'Photo has been approved and notification sent.');
     }
 
     /**
@@ -773,7 +780,7 @@ class TripTable extends Component
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
 
-            $searchDetailTerm = strtolower($this->detailSearch);
+        $searchDetailTerm = strtolower($this->detailSearch);
         $detailTripsQuery = Trip::with('user', 'vehicle')
             ->where(function ($query) use ($searchDetailTerm) {
                 $query->where(DB::raw('(project_name)'), 'like', '%' . $searchDetailTerm . '%')
