@@ -31,18 +31,26 @@ class WhatsAppNotificationService
      */
     protected function sendMessageWithImages(string $target, string $caption, array $imageUrls): bool
     {
+        Log::info('--- Memulai sendMessageWithImages ---');
         if (!$this->fonnteToken) {
-            Log::error('Fonnte token is not configured.');
+            Log::error('[DEBUG] Fonnte token tidak dikonfigurasi.');
             return false;
         }
 
         // Jika tidak ada gambar, kirim sebagai teks biasa
         if (empty($imageUrls)) {
+            Log::info('[DEBUG] Tidak ada gambar, mengirim sebagai teks biasa.');
             return $this->sendTextMessage($target, $caption);
         }
 
         // Kirim gambar pertama dengan caption
         $firstImageUrl = array_shift($imageUrls);
+
+        Log::info('[DEBUG] Payload untuk gambar pertama:', [
+            'target' => $target,
+            'caption_length' => strlen($caption),
+            'url' => $firstImageUrl
+        ]);
         try {
             Http::timeout(30)
                 ->withHeaders(['Authorization' => $this->fonnteToken])
@@ -51,22 +59,25 @@ class WhatsAppNotificationService
                     'message' => $caption,
                     'url'     => $firstImageUrl,
                 ]);
-
+            Log::info('[DEBUG] Respon Fonnte untuk gambar pertama:', ['status' => $response->status(), 'body' => $response->json()]);
             sleep(2);
 
             foreach ($imageUrls as $imageUrl) {
+                Log::info('[DEBUG] Mengirim gambar tambahan:', ['url' => $imageUrl]);
                 Http::timeout(30)
                     ->withHeaders(['Authorization' => $this->fonnteToken])
                     ->post('https://api.fonnte.com/send', [
                         'target'  => $target,
                         'url'     => $imageUrl,
                     ]);
+                Log::info('[DEBUG] Respon Fonnte untuk gambar tambahan:', ['status' => $response->status(), 'body' => $response->json()]);
                 sleep(2);
             }
 
+            Log::info('--- sendMessageWithImages Selesai ---');
             return true;
         } catch (\Exception $e) {
-            Log::error('Exception when sending WhatsApp message via Fonnte: ' . $e->getMessage());
+            Log::error('[DEBUG] Exception saat mengirim pesan via Fonnte: ' . $e->getMessage());
             return false;
         }
     }
@@ -135,12 +146,12 @@ class WhatsAppNotificationService
 
         return sprintf(
             "%s\n\n" .
-            "DRIVER: %s\n" .
-            "DESTINATION: %s\n" .
-            "NOPOL: %s\n" .
-            "TGL MUAT: %s\n" .
-            "TGL BONGKAR: %s\n" .
-            "STATUS: %s",
+                "DRIVER: %s\n" .
+                "DESTINATION: %s\n" .
+                "NOPOL: %s\n" .
+                "TGL MUAT: %s\n" .
+                "TGL BONGKAR: %s\n" .
+                "STATUS: %s",
             $header,
             $driverName,
             $destination,

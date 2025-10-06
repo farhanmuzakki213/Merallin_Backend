@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\VehicleLocation;
 use Illuminate\Support\Facades\Storage;
 use App\Services\WhatsAppNotificationService;
+use Illuminate\Support\Facades\Log;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -155,14 +156,17 @@ class TripTable extends Component
      */
     public function sendProsesMuatNotification($tripId, WhatsAppNotificationService $waNotificationService)
     {
+        Log::info('[DEBUG] Tombol Kirim Notif "Proses Muat" ditekan untuk Trip ID: ' . $tripId);
         $trip = Trip::findOrFail($tripId);
 
         // Tangkap status pengiriman (true jika berhasil, false jika gagal)
         $isSent = $waNotificationService->notifyProsesMuat($trip);
 
         if ($isSent) {
+            Log::info('[DEBUG] Notifikasi "Proses Muat" BERHASIL dikirim.');
             session()->flash('message', 'Notifikasi "Proses Muat" untuk perjalanan ' . $trip->order_id . ' telah berhasil dikirim.');
         } else {
+            Log::error('[DEBUG] Notifikasi "Proses Muat" GAGAL dikirim.');
             session()->flash('error', 'Gagal mengirim Notifikasi "Proses Muat". Pastikan gambar sudah lengkap dan coba lagi.');
         }
     }
@@ -175,14 +179,17 @@ class TripTable extends Component
      */
     public function sendProsesBongkarNotification($tripId, WhatsAppNotificationService $waNotificationService)
     {
+        Log::info('[DEBUG] Tombol Kirim Notif "Proses Bongkar" ditekan untuk Trip ID: ' . $tripId);
         $trip = Trip::findOrFail($tripId);
 
         // Tangkap status pengiriman (true jika berhasil, false jika gagal)
         $isSent = $waNotificationService->notifyProsesBongkar($trip);
 
         if ($isSent) {
+            Log::info('[DEBUG] Notifikasi "Proses Bongkar" BERHASIL dikirim.');
             session()->flash('message', 'Notifikasi "Proses Bongkar" untuk perjalanan ' . $trip->order_id . ' telah berhasil dikirim.');
         } else {
+            Log::error('[DEBUG] Notifikasi "Proses Bongkar" GAGAL dikirim.');
             session()->flash('error', 'Gagal mengirim Notifikasi "Proses Bongkar". Pastikan gambar sudah lengkap dan coba lagi.');
         }
     }
