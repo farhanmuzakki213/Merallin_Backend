@@ -177,7 +177,7 @@ class WhatsAppNotificationService
         }
         $statusMessage = "Telah Tiba di Lokasi Muat";
         $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $imageUrls = [Storage::url($trip->kedatangan_muat_photo_path)];
+        $imageUrls = [asset(Storage::url($trip->kedatangan_muat_photo_path))];
         return $this->sendGroupMessageWithImages($caption, $imageUrls);
     }
 
