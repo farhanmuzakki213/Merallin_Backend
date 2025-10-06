@@ -52,7 +52,7 @@ class WhatsAppNotificationService
             'url' => $firstImageUrl
         ]);
         try {
-            Http::timeout(30)
+            $response = Http::timeout(30)
                 ->withHeaders(['Authorization' => $this->fonnteToken])
                 ->post('https://api.fonnte.com/send', [
                     'target'  => $target,
@@ -60,11 +60,15 @@ class WhatsAppNotificationService
                     'url'     => $firstImageUrl,
                 ]);
             Log::info('[DEBUG] Respon Fonnte untuk gambar pertama:', ['status' => $response->status(), 'body' => $response->json()]);
+            if ($response->failed()) {
+                Log::error('[DEBUG] Fonnte mengembalikan error.', ['status' => $response->status(), 'body' => $response->json()]);
+                return false;
+            }
             sleep(2);
 
             foreach ($imageUrls as $imageUrl) {
                 Log::info('[DEBUG] Mengirim gambar tambahan:', ['url' => $imageUrl]);
-                Http::timeout(30)
+                $response = Http::timeout(30)
                     ->withHeaders(['Authorization' => $this->fonnteToken])
                     ->post('https://api.fonnte.com/send', [
                         'target'  => $target,
