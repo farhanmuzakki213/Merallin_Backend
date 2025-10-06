@@ -170,6 +170,8 @@ class WhatsAppNotificationService
 
     public function notifyKedatanganMuat(Trip $trip): bool
     {
+        $debugUrlConfig = config('filesystems.disks.public.url');
+        Log::info('[DEBUG ULTIMATE TEST] Nilai config url saat ini: ' . $debugUrlConfig);
         if (empty($trip->kedatangan_muat_photo_path)) {
             return false; // Berhenti jika gambar tidak ada
         }
