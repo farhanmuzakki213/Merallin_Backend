@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Models\VehicleLocation;
 use Illuminate\Support\Facades\Storage;
+use App\Services\WhatsAppNotificationService;
 
 #[Layout('layouts.app')]
 #[Title('Trip Management')]
@@ -140,6 +141,76 @@ class TripTable extends Component
         $fileName = 'laporan-trip-semua-driver-' . strtolower($now->format('F')) . '-' . $currentYear . '.xlsx';
 
         return Excel::download(new TripUserReportExport($dataForExport), $fileName);
+    }
+
+    /**
+     * Mengubah status verifikasi foto dan mengirim notifikasi jika statusnya 'approved'.
+     *
+     * @param int $id
+     * @param string $photo_type
+     * @param string $status
+     * @param WhatsAppNotificationService $waNotificationService
+     */
+    public function updatePhotoStatus($id, $photo_type, $status, WhatsAppNotificationService $waNotificationService)
+    {
+        $trip = Trip::findOrFail($id);
+        $status_column = $photo_type . '_status';
+
+        $trip->update([$status_column => $status]);
+
+        // Kirim notifikasi HANYA JIKA status diubah menjadi 'approved'
+        if ($status === 'approved') {
+            switch ($photo_type) {
+                case 'kedatangan_muat_photo':
+                    // Notifikasi 1: Tiba di lokasi muat
+                    $waNotificationService->notifyKedatanganMuat($trip);
+                    break;
+                case 'muat_photo':
+                    // Notifikasi 3: Selesai muat barang
+                    $waNotificationService->notifySelesaiMuat($trip);
+                    break;
+                case 'kedatangan_bongkar_photo':
+                    // Notifikasi 4: Tiba di lokasi bongkar
+                    $waNotificationService->notifyKedatanganBongkar($trip);
+                    break;
+                case 'bongkar_photo':
+                    // Notifikasi 6: Selesai bongkar barang
+                    $waNotificationService->notifySelesaiBongkar($trip);
+                    break;
+            }
+        }
+
+        $this->dispatch('photo-status-updated');
+    }
+
+    /**
+     * Metode baru untuk mengirim notifikasi proses muat secara manual.
+     *
+     * @param int $tripId
+     * @param WhatsAppNotificationService $waNotificationService
+     */
+    public function sendProsesMuatNotification($tripId, WhatsAppNotificationService $waNotificationService)
+    {
+        $trip = Trip::findOrFail($tripId);
+        // Notifikasi 2: Sedang proses muat
+        $waNotificationService->notifyProsesMuat($trip);
+        // Beri feedback ke user di frontend
+        session()->flash('message', 'Notifikasi "Proses Muat" untuk perjalanan ' . $trip->order_id . ' telah dikirim.');
+    }
+
+    /**
+     * Metode baru untuk mengirim notifikasi proses bongkar secara manual.
+     *
+     * @param int $tripId
+     * @param WhatsAppNotificationService $waNotificationService
+     */
+    public function sendProsesBongkarNotification($tripId, WhatsAppNotificationService $waNotificationService)
+    {
+        $trip = Trip::findOrFail($tripId);
+        // Notifikasi 5: Sedang proses bongkar
+        $waNotificationService->notifyProsesBongkar($trip);
+        // Beri feedback ke user di frontend
+        session()->flash('message', 'Notifikasi "Proses Bongkar" untuk perjalanan ' . $trip->order_id . ' telah dikirim.');
     }
 
     /**

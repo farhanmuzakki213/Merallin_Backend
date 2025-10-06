@@ -43,8 +43,7 @@
                     $currentPhoto = $consolidatedGalleryPhotos[$currentGalleryIndex];
                 @endphp
                 <figure class="relative">
-                    <img src="{{ $currentPhoto['url'] }}"
-                        alt="{{ $galleryTitle }} {{ $currentGalleryIndex + 1 }}"
+                    <img src="{{ $currentPhoto['url'] }}" alt="{{ $galleryTitle }} {{ $currentGalleryIndex + 1 }}"
                         class="h-auto w-full rounded-lg object-contain max-h-[90vh]">
                     {{-- Keterangan Nama Gudang --}}
                     <figcaption
@@ -82,18 +81,32 @@
 
                 {{-- Tombol Hapus Foto --}}
                 <button wire:click="deleteGalleryPhoto({{ $currentGalleryIndex }})"
-                    wire:confirm="Anda yakin ingin menghapus foto ini secara permanen?"
-                    wire:loading.attr="disabled" wire:target="deleteGalleryPhoto"
+                    wire:confirm="Anda yakin ingin menghapus foto ini secara permanen?" wire:loading.attr="disabled"
+                    wire:target="deleteGalleryPhoto"
                     class="flex items-center font-semibold text-red-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                     title="Hapus Foto Ini">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     <span>Hapus</span>
                 </button>
             </div>
+        @endif
+        @if ($photo_type === 'muat_photo' && $status !== 'pending')
+            <button wire:click="sendProsesMuatNotification({{ $trip->id }})"
+                class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+                Kirim Notifikasi "Proses Muat"
+            </button>
+        @endif
+
+        {{-- Di dalam loop untuk menampilkan gambar 'bongkar_photo' --}}
+        @if ($photo_type === 'bongkar_photo' && $status !== 'pending')
+            <button wire:click="sendProsesBongkarNotification({{ $trip->id }})"
+                class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+                Kirim Notifikasi "Proses Bongkar"
+            </button>
         @endif
     </div>
 </div>
