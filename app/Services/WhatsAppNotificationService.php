@@ -2,128 +2,55 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Jobs\SendWhatsappNotificationJob;
 use App\Models\Trip;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Carbon\Carbon;
 
 class WhatsAppNotificationService
 {
-    protected $fonnteToken;
     protected $groupId;
 
     public function __construct()
     {
-        $this->fonnteToken = config('services.whatsapp.fonnte_token');
         $this->groupId = config('services.whatsapp.group_id');
     }
 
     /**
-     * Mengirim pesan dengan gambar via API Fonnte.
-     * Fonnte akan mengirim gambar satu per satu.
-     * Teks caption hanya akan dikirim bersama gambar pertama.
-     *
-     * @param string $target
-     * @param string $caption
-     * @param array $imageUrls
-     * @return bool
+     * Fungsi inti untuk memasukkan job pengiriman ke antrian.
      */
-    protected function sendMessageWithImages(string $target, string $caption, array $imageUrls): bool
+    private function dispatchWhatsappJob(string $to, string $message, ?string $imageUrl = null, ?int $tripId = null): void
     {
-        Log::info('--- Memulai sendMessageWithImages ---');
-        if (!$this->fonnteToken) {
-            Log::error('[DEBUG] Fonnte token tidak dikonfigurasi.');
-            return false;
-        }
-
-        // Jika tidak ada gambar, kirim sebagai teks biasa
-        if (empty($imageUrls)) {
-            Log::info('[DEBUG] Tidak ada gambar, mengirim sebagai teks biasa.');
-            return $this->sendTextMessage($target, $caption);
-        }
-
-        // Kirim gambar pertama dengan caption
-        $firstImageUrl = array_shift($imageUrls);
-
-        Log::info('[DEBUG] Payload untuk gambar pertama:', [
-            'target' => $target,
-            'caption_length' => strlen($caption),
-            'url' => $firstImageUrl
-        ]);
-        try {
-            $response = Http::timeout(30)
-                ->withHeaders(['Authorization' => $this->fonnteToken])
-                ->post('https://api.fonnte.com/send', [
-                    'target'  => $target,
-                    'message' => $caption,
-                    'url'     => $firstImageUrl,
-                ]);
-            Log::info('[DEBUG] Respon Fonnte untuk gambar pertama:', ['status' => $response->status(), 'body' => $response->json()]);
-            if ($response->failed()) {
-                Log::error('[DEBUG] Fonnte mengembalikan error.', ['status' => $response->status(), 'body' => $response->json()]);
-                return false;
-            }
-            sleep(2);
-
-            foreach ($imageUrls as $imageUrl) {
-                Log::info('[DEBUG] Mengirim gambar tambahan:', ['url' => $imageUrl]);
-                $response = Http::timeout(30)
-                    ->withHeaders(['Authorization' => $this->fonnteToken])
-                    ->post('https://api.fonnte.com/send', [
-                        'target'  => $target,
-                        'url'     => $imageUrl,
-                    ]);
-                Log::info('[DEBUG] Respon Fonnte untuk gambar tambahan:', ['status' => $response->status(), 'body' => $response->json()]);
-                sleep(2);
-            }
-
-            Log::info('--- sendMessageWithImages Selesai ---');
-            return true;
-        } catch (\Exception $e) {
-            Log::error('[DEBUG] Exception saat mengirim pesan via Fonnte: ' . $e->getMessage());
-            return false;
-        }
+        $payload = [
+            'to' => $to,
+            'message' => $message,
+            'image_url' => $imageUrl,
+        ];
+        SendWhatsappNotificationJob::dispatch($payload, $tripId);
     }
 
-    /**
-     * Helper untuk mengirim pesan teks saja (fungsi lama sendMessage).
-     */
-    protected function sendTextMessage(string $target, string $message): bool
+    // ===================================================================
+    // METODE UNTUK TEST (SESUAI PERMINTAAN)
+    // ===================================================================
+
+    public function testSendPersonalMessage(?string $number, string $message, ?string $imageUrl = null): void
     {
-        if (!$this->fonnteToken) {
-            Log::error('Fonnte token is not configured.');
-            return false;
+        if (!$number) {
+            return;
         }
-        try {
-            Http::timeout(30)
-                ->withHeaders(['Authorization' => $this->fonnteToken])
-                ->post('https://api.fonnte.com/send', [
-                    'target'  => $target,
-                    'message' => $message,
-                ]);
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Exception when sending WhatsApp text message via Fonnte: ' . $e->getMessage());
-            return false;
-        }
+        $this->dispatchWhatsappJob($number, $message, $imageUrl);
     }
 
-    /**
-     * Helper untuk mengirim pesan dengan gambar ke grup default.
-     */
-    public function sendGroupMessageWithImages(string $caption, array $imageUrls): bool
+    public function testSendGroupMessage(string $message, ?string $imageUrl = null): void
     {
-        if (!$this->groupId) {
-            Log::error('WhatsApp Group ID is not configured.');
-            return false;
-        }
-        return $this->sendMessageWithImages($this->groupId, $caption, $imageUrls);
+        $this->dispatchWhatsappJob($this->groupId, $message, $imageUrl);
     }
 
-    /**
-     * Memformat pesan notifikasi sesuai template baru.
-     */
+    // ===================================================================
+    // FORMAT DETAIL PESAN (DIPERTAHANKAN SESUAI KODE ANDA)
+    // ===================================================================
+
     protected function formatTripDetailsMessage(Trip $trip, string $statusMessage): string
     {
         $projectName = $trip->project_name ?? 'N/A';
@@ -142,7 +69,7 @@ class WhatsAppNotificationService
         ]);
 
         $tglBongkar = '-';
-        if ($isBongkarProcess) {
+        if ($isBongkarProcess && $trip->updated_at) {
             $tglBongkar = Carbon::parse($trip->updated_at)->timezone('Asia/Jakarta')->format('d/m/Y');
         }
 
@@ -166,93 +93,70 @@ class WhatsAppNotificationService
         );
     }
 
-    // --- METODE UNTUK SETIAP NOTIFIKASI ---
+    // ===================================================================
+    // METODE UNTUK SETIAP NOTIFIKASI (DIPERTAHANKAN & DIPERBAIKI)
+    // ===================================================================
 
-    public function notifyKedatanganMuat(Trip $trip): bool
+    private function dispatchNotification(Trip $trip, string $statusMessage, $photoPaths): void
     {
-        $debugUrlConfig = config('filesystems.disks.public.url');
-        Log::info('[DEBUG ULTIMATE TEST] Nilai config url saat ini: ' . $debugUrlConfig);
-        if (empty($trip->kedatangan_muat_photo_path)) {
-            return false; // Berhenti jika gambar tidak ada
+        if (empty($photoPaths)) {
+            return;
         }
-        $statusMessage = "Telah Tiba di Lokasi Muat";
+
         $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $imageUrls = [asset(Storage::url($trip->kedatangan_muat_photo_path))];
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+
+        // Pastikan $photoPaths selalu array
+        $paths = is_array($photoPaths) ? $photoPaths : [$photoPaths];
+
+        // Ambil semua path gambar dari struktur array yang mungkin nested
+        $imageUrls = collect($paths)->flatten()->map(fn($path) => Storage::url($path))->filter()->values()->all();
+
+        if (empty($imageUrls)) {
+            return;
+        }
+
+        // Kirim gambar pertama dengan caption
+        $firstImageUrl = array_shift($imageUrls);
+        $this->dispatchWhatsappJob($this->groupId, $caption, $firstImageUrl, $trip->id);
+
+        // Kirim sisa gambar tanpa caption
+        foreach ($imageUrls as $url) {
+            $this->dispatchWhatsappJob($this->groupId, '', $url, $trip->id);
+            usleep(500000); // Jeda 0.5 detik antar dispatch
+        }
     }
 
-    public function notifyProsesMuat(Trip $trip): bool
+    public function notifyKedatanganMuat(Trip $trip): void
     {
-        if (empty($trip->muat_photo_path) || !is_array($trip->muat_photo_path)) {
-            return false; // Berhenti jika array gambar kosong
-        }
-        $statusMessage = "Sedang dalam Proses Muat Barang";
-        $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $imageUrls = [];
-        foreach ($trip->muat_photo_path as $gudangPhotos) {
-            foreach ($gudangPhotos as $path) {
-                $imageUrls[] = Storage::url($path);
-            }
-        }
-        if (empty($imageUrls)) return false; // Pastikan lagi setelah loop
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+        $this->dispatchNotification($trip, "Telah Tiba di Lokasi Muat", $trip->kedatangan_muat_photo_path);
     }
 
-    public function notifySelesaiMuat(Trip $trip): bool
+    public function notifyProsesMuat(Trip $trip): void
     {
-        if (empty($trip->muat_photo_path) || !is_array($trip->muat_photo_path)) {
-            return false;
-        }
-        $statusMessage = "Telah Selesai Muat Barang";
-        $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $allPaths = array_merge(...array_values($trip->muat_photo_path));
-        if (empty($allPaths)) {
-            return false;
-        }
-        $imageUrls = [Storage::url(last($allPaths))];
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+        $this->dispatchNotification($trip, "Sedang dalam Proses Muat Barang", $trip->muat_photo_path);
     }
 
-    public function notifyKedatanganBongkar(Trip $trip): bool
+    public function notifySelesaiMuat(Trip $trip): void
     {
-        if (empty($trip->kedatangan_bongkar_photo_path)) {
-            return false;
-        }
-        $statusMessage = "Telah Tiba di Lokasi Bongkar";
-        $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $imageUrls = [Storage::url($trip->kedatangan_bongkar_photo_path)];
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+        // Mengambil hanya gambar terakhir dari semua proses muat
+        $lastPhoto = collect($trip->muat_photo_path)->flatten()->last();
+        $this->dispatchNotification($trip, "Telah Selesai Muat Barang", $lastPhoto);
     }
 
-    public function notifyProsesBongkar(Trip $trip): bool
+    public function notifyKedatanganBongkar(Trip $trip): void
     {
-        if (empty($trip->bongkar_photo_path) || !is_array($trip->bongkar_photo_path)) {
-            return false;
-        }
-        $statusMessage = "Sedang dalam Proses Bongkar Barang";
-        $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $imageUrls = [];
-        foreach ($trip->bongkar_photo_path as $gudangPhotos) {
-            foreach ($gudangPhotos as $path) {
-                $imageUrls[] = Storage::url($path);
-            }
-        }
-        if (empty($imageUrls)) return false;
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+        $this->dispatchNotification($trip, "Telah Tiba di Lokasi Bongkar", $trip->kedatangan_bongkar_photo_path);
     }
 
-    public function notifySelesaiBongkar(Trip $trip): bool
+    public function notifyProsesBongkar(Trip $trip): void
     {
-        if (empty($trip->bongkar_photo_path) || !is_array($trip->bongkar_photo_path)) {
-            return false;
-        }
-        $statusMessage = "Telah Selesai Bongkar Barang";
-        $caption = $this->formatTripDetailsMessage($trip, $statusMessage);
-        $allPaths = array_merge(...array_values($trip->bongkar_photo_path));
-        if (empty($allPaths)) {
-            return false;
-        }
-        $imageUrls = [Storage::url(last($allPaths))];
-        return $this->sendGroupMessageWithImages($caption, $imageUrls);
+        $this->dispatchNotification($trip, "Sedang dalam Proses Bongkar Barang", $trip->bongkar_photo_path);
+    }
+
+    public function notifySelesaiBongkar(Trip $trip): void
+    {
+        // Mengambil hanya gambar terakhir dari semua proses bongkar
+        $lastPhoto = collect($trip->bongkar_photo_path)->flatten()->last();
+        $this->dispatchNotification($trip, "Telah Selesai Bongkar Barang", $lastPhoto);
     }
 }

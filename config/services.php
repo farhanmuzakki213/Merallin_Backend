@@ -35,7 +35,8 @@ return [
         ],
     ],
     'whatsapp' => [
+        'server_url' => env('WA_SERVER_URL'),
         'group_id' => env('WHATSAPP_GROUP_ID'),
-        'fonnte_token' => env('FONNTE_TOKEN'),
+        'secret_key' => env('WA_SERVER_SECRET_KEY'),
     ],
 ];
